@@ -1,12 +1,26 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
-	let { data: initialData }: { data: PageData } = $props();
+	let {
+		data: initialData,
+		form
+	}: {
+		data: PageData;
+		form: ActionData;
+	} = $props();
 
 	function getInitialAnalysis() {
 		return structuredClone(initialData.analysis);
+	}
+
+	function getShareUrl() {
+		return initialData.shareUrl;
+	}
+
+	function getRadarReady() {
+		return initialData.radarReady;
 	}
 
 	let activeAnalysis = $state(getInitialAnalysis());
@@ -14,17 +28,19 @@
 	let pollingError = $state<string | null>(null);
 
 	const statusLabels = {
-		sending: 'Enviando payload a n8n',
-		waiting_callback: 'Esperando callback firmado',
-		completed: 'Roundtrip completado',
-		failed: 'La corrida falló'
+		queued: 'En cola',
+		enriching: 'Enriqueciendo metadata',
+		summarizing: 'Generando brief en n8n',
+		completed: 'Listo para revisión',
+		failed: 'Análisis fallido'
 	} as const;
 
 	const statusDescriptions = {
-		sending: 'Generando el payload demo y disparando el webhook privado.',
-		waiting_callback: 'n8n aceptó la corrida; la app está esperando el callback interno.',
-		completed: 'La corrida volvió desde n8n y quedó persistida en Postgres.',
-		failed: 'La integración respondió con error o el callback no pasó la validación.'
+		queued: 'La corrida ya fue creada y quedó persistida en Postgres.',
+		enriching: 'La app está consultando npm registry y calculando riesgo preliminar.',
+		summarizing: 'n8n ya recibió el payload y está generando el brief ejecutivo.',
+		completed: 'El brief final ya volvió, fue saneado y quedó disponible en esta URL.',
+		failed: 'El flujo terminó con error. Revisa el panel técnico y vuelve a intentar si hace falta.'
 	} as const;
 
 	$effect(() => {
@@ -93,6 +109,19 @@
 	const callbackJson = $derived(
 		activeAnalysis.callbackPayload ? JSON.stringify(activeAnalysis.callbackPayload, null, 2) : ''
 	);
+	const majorDependencies = $derived(
+		activeAnalysis.dependencies.filter((dependency) => dependency.diffType === 'major').length
+	);
+	const minorDependencies = $derived(
+		activeAnalysis.dependencies.filter((dependency) => dependency.diffType === 'minor').length
+	);
+	const patchDependencies = $derived(
+		activeAnalysis.dependencies.filter((dependency) => dependency.diffType === 'patch').length
+	);
+	const deprecatedDependencies = $derived(
+		activeAnalysis.dependencies.filter((dependency) => dependency.deprecated).length
+	);
+	const criticalDependencies = $derived(activeAnalysis.dependencies.slice(0, 8));
 
 	function formatTimestamp(value?: string) {
 		if (!value) return 'Pendiente';
@@ -105,19 +134,38 @@
 
 	function getStatusTone(status: keyof typeof statusLabels) {
 		return {
-			sending: 'border-amber-300/70 bg-amber-100/80 text-amber-900',
-			waiting_callback: 'border-cyan-300/70 bg-cyan-100/80 text-cyan-900',
+			queued: 'border-violet-300/70 bg-violet-100/80 text-violet-900',
+			enriching: 'border-cyan-300/70 bg-cyan-100/80 text-cyan-900',
+			summarizing: 'border-amber-300/70 bg-amber-100/80 text-amber-900',
 			completed: 'border-emerald-300/70 bg-emerald-100/80 text-emerald-900',
 			failed: 'border-rose-300/70 bg-rose-100/80 text-rose-900'
 		}[status];
 	}
+
+	function getDecisionTone(decision: (typeof activeAnalysis.dependencies)[number]['decision']) {
+		return {
+			upgrade_now: 'bg-rose-100 text-rose-900',
+			upgrade_later: 'bg-amber-100 text-amber-900',
+			replace: 'bg-fuchsia-100 text-fuchsia-900',
+			hold: 'bg-slate-100 text-slate-700'
+		}[decision];
+	}
+
+	function getDiffTone(diffType: (typeof activeAnalysis.dependencies)[number]['diffType']) {
+		return {
+			major: 'bg-rose-100 text-rose-900',
+			minor: 'bg-amber-100 text-amber-900',
+			patch: 'bg-emerald-100 text-emerald-900',
+			unknown: 'bg-slate-100 text-slate-700'
+		}[diffType];
+	}
 </script>
 
 <svelte:head>
-	<title>{activeAnalysis.project.name} | Analysis</title>
+	<title>{activeAnalysis.project.name} | Package Version Wizard</title>
 	<meta
 		name="description"
-		content="Vista persistida de un análisis de Package Version Wizard con polling y callback desde n8n."
+		content="Vista persistida del análisis de dependencias, con progreso, brief AI y automatización continua."
 	/>
 </svelte:head>
 
@@ -130,7 +178,7 @@
 						href="/"
 						class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 transition hover:border-slate-300 hover:bg-white"
 					>
-						Volver al landing
+						Volver al wizard
 					</a>
 					<p class="mt-4 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
 						Análisis persistido
@@ -139,84 +187,76 @@
 						{activeAnalysis.project.name}
 					</h1>
 					<p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-						Este análisis vive en Postgres, recibe callbacks idempotentes desde n8n y expone una
-						API de polling en `/api/analyses/[id]`.
+						{activeAnalysis.manifestName ?? 'package.json'}
+						{#if activeAnalysis.manifestVersion}
+							<span class="mx-2 text-slate-300">•</span>
+							v{activeAnalysis.manifestVersion}
+						{/if}
+						<span class="mx-2 text-slate-300">•</span>
+						{activeAnalysis.stats.total} dependencias detectadas
 					</p>
 				</div>
 
-				<span
-					class={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusTone(activeAnalysis.status)}`}
-				>
-					{statusLabels[activeAnalysis.status]}
-				</span>
-			</div>
-		</section>
-
-		<section class="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-			<div class="rounded-[2rem] border border-slate-200/80 bg-white/85 p-6 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur">
-				<div class="flex items-center justify-between gap-3">
-					<div>
-						<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-							Estado actual
-						</p>
-						<h2 class="mt-2 text-2xl font-bold text-slate-950">Corrida persistida</h2>
-					</div>
+				<div class="flex flex-wrap items-center gap-3">
+					{#if getShareUrl()}
+						<a
+							href={getShareUrl()}
+							target="_blank"
+							rel="noreferrer"
+							class="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 transition hover:border-slate-300 hover:bg-white"
+						>
+							Abrir link público
+						</a>
+					{/if}
 					<span
 						class={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusTone(activeAnalysis.status)}`}
 					>
 						{statusLabels[activeAnalysis.status]}
 					</span>
 				</div>
+			</div>
+		</section>
 
-				<div class="mt-6 space-y-4">
-					<div class="rounded-3xl border border-slate-200 bg-slate-50/80 p-5">
-						<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Run ID</p>
-						<p class="mt-2 break-all font-mono text-sm text-slate-800">{activeAnalysis.id}</p>
-					</div>
+		<section class="grid gap-6 xl:grid-cols-[0.84fr_1.16fr]">
+			<div class="space-y-6">
+				<div class="rounded-[2rem] border border-slate-200/80 bg-white/85 p-6 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur">
+					<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Progreso</p>
+					<h2 class="mt-2 text-2xl font-bold text-slate-950">{statusLabels[activeAnalysis.status]}</h2>
+					<p class="mt-3 text-sm leading-7 text-slate-600">{statusDescriptions[activeAnalysis.status]}</p>
 
-					<div class="grid gap-4 sm:grid-cols-2">
+					<div class="mt-6 grid gap-4 sm:grid-cols-2">
 						<div class="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-							<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-								Creado
-							</p>
+							<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Creado</p>
 							<p class="mt-2 text-sm text-slate-800">{formatTimestamp(activeAnalysis.createdAt)}</p>
 						</div>
 						<div class="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-							<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-								Callback
-							</p>
+							<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Callback</p>
 							<p class="mt-2 text-sm text-slate-800">
 								{formatTimestamp(activeAnalysis.callbackReceivedAt)}
 							</p>
 						</div>
 					</div>
 
-					<div class="rounded-3xl border border-slate-200 bg-white p-5">
-						<p class="text-sm font-semibold text-slate-950">
-							{statusDescriptions[activeAnalysis.status]}
-						</p>
+					{#if isPolling}
+						<div class="mt-5 flex items-center gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-950">
+							<span class="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-600"></span>
+							La página sigue consultando el estado automáticamente.
+						</div>
+					{/if}
 
-						{#if isPolling}
-							<div class="mt-4 flex items-center gap-3 text-sm text-slate-500">
-								<span class="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-500"></span>
-								La página sigue consultando el estado automáticamente.
-							</div>
-						{/if}
+					{#if pollingError}
+						<div class="mt-4 rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+							{pollingError}
+						</div>
+					{/if}
 
-						{#if pollingError}
-							<div class="mt-4 rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900">
-								{pollingError}
-							</div>
-						{/if}
+					{#if activeAnalysis.errorMessage}
+						<div class="mt-4 rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+							{activeAnalysis.errorMessage}
+						</div>
+					{/if}
 
-						{#if activeAnalysis.errorMessage}
-							<div class="mt-4 rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900">
-								{activeAnalysis.errorMessage}
-							</div>
-						{/if}
-					</div>
-
-					<div class="rounded-3xl border border-slate-200 bg-slate-950 p-5 text-slate-50">
+					<div class="mt-6 rounded-3xl border border-slate-200 bg-slate-950 p-5 text-slate-50">
 						<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Dispatch</p>
 						<div class="mt-3 grid gap-3 text-sm sm:grid-cols-2">
 							<div>
@@ -234,16 +274,128 @@
 						</div>
 					</div>
 				</div>
+
+				<div class="rounded-[2rem] border border-slate-200/80 bg-white/85 p-6 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur">
+					<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Buckets de riesgo</p>
+					<h2 class="mt-2 text-2xl font-bold text-slate-950">Qué cambió en el árbol</h2>
+
+					<div class="mt-6 grid gap-4 sm:grid-cols-2">
+						<div class="rounded-3xl border border-rose-200 bg-rose-50/90 p-5">
+							<p class="text-sm font-semibold text-rose-950">Major upgrades</p>
+							<p class="mt-2 text-4xl font-extrabold tracking-tight text-rose-950">{majorDependencies}</p>
+						</div>
+						<div class="rounded-3xl border border-fuchsia-200 bg-fuchsia-50/90 p-5">
+							<p class="text-sm font-semibold text-fuchsia-950">Deprecated</p>
+							<p class="mt-2 text-4xl font-extrabold tracking-tight text-fuchsia-950">{deprecatedDependencies}</p>
+						</div>
+						<div class="rounded-3xl border border-amber-200 bg-amber-50/90 p-5">
+							<p class="text-sm font-semibold text-amber-950">Minor upgrades</p>
+							<p class="mt-2 text-4xl font-extrabold tracking-tight text-amber-950">{minorDependencies}</p>
+						</div>
+						<div class="rounded-3xl border border-emerald-200 bg-emerald-50/90 p-5">
+							<p class="text-sm font-semibold text-emerald-950">Patch upgrades</p>
+							<p class="mt-2 text-4xl font-extrabold tracking-tight text-emerald-950">{patchDependencies}</p>
+						</div>
+					</div>
+				</div>
+
+				<div class="rounded-[2rem] border border-slate-200/80 bg-white/85 p-6 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur">
+					<div class="flex items-start justify-between gap-4">
+						<div>
+							<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Radar continuo</p>
+							<h2 class="mt-2 text-2xl font-bold text-slate-950">Automatización Slack</h2>
+						</div>
+						{#if activeAnalysis.subscription?.enabled}
+							<span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900">
+								Activa
+							</span>
+						{/if}
+					</div>
+
+					<p class="mt-3 text-sm leading-7 text-slate-600">
+						Conecta este proyecto al workflow de radar continuo para recibir cambios relevantes sin subir el manifiesto otra vez.
+					</p>
+
+					<form method="POST" action="?/saveSlackSubscription" class="mt-6 space-y-4">
+						<label class="inline-flex items-center gap-3 text-sm font-medium text-slate-700">
+							<input
+								name="enabled"
+								type="checkbox"
+								class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-200"
+								checked={activeAnalysis.subscription?.enabled ?? false}
+							/>
+							Activar radar por Slack para este proyecto
+						</label>
+
+						<div class="grid gap-4 sm:grid-cols-[1.1fr_0.9fr]">
+							<label class="block">
+								<span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+									Canal o destino
+								</span>
+								<input
+									name="channelTarget"
+									type="text"
+									placeholder="#platform-upgrades"
+									value={activeAnalysis.subscription?.channelTarget ?? ''}
+									class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+								/>
+							</label>
+
+							<label class="block">
+								<span class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+									Frecuencia
+								</span>
+								<select
+									name="frequency"
+									class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900"
+								>
+									<option value="daily" selected={(activeAnalysis.subscription?.frequency ?? 'daily') === 'daily'}>
+										Daily
+									</option>
+									<option
+										value="weekdays"
+										selected={activeAnalysis.subscription?.frequency === 'weekdays'}
+									>
+										Weekdays
+									</option>
+									<option
+										value="twice_daily"
+										selected={activeAnalysis.subscription?.frequency === 'twice_daily'}
+									>
+										Twice daily
+									</option>
+								</select>
+							</label>
+						</div>
+
+						<button
+							type="submit"
+							class="inline-flex items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+						>
+							Guardar automatización
+						</button>
+					</form>
+
+					{#if form?.message}
+						<div class="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-900">
+							{form.message}
+						</div>
+					{/if}
+
+					{#if !getRadarReady()}
+						<div class="mt-4 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+							Falta configurar `PUBLIC_APP_URL` o `N8N_INTERNAL_API_TOKEN` para habilitar el radar continuo end-to-end.
+						</div>
+					{/if}
+				</div>
 			</div>
 
 			<div class="space-y-6">
 				<div class="rounded-[2rem] border border-slate-200/80 bg-white/85 p-6 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur">
 					<div class="flex items-center justify-between gap-3">
 						<div>
-							<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-								Resultado renderizado
-							</p>
-							<h2 class="mt-2 text-2xl font-bold text-slate-950">Brief de upgrade demo</h2>
+							<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Brief AI</p>
+							<h2 class="mt-2 text-2xl font-bold text-slate-950">Resumen ejecutivo</h2>
 						</div>
 						{#if activeAnalysis.status === 'completed'}
 							<span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900">
@@ -258,113 +410,171 @@
 								{@html activeAnalysis.renderedSummaryHtml}
 							</div>
 						</div>
-
-						{#if activeAnalysis.callbackPayload?.upgradePlan.length}
-							<div class="mt-6 grid gap-4 lg:grid-cols-2">
-								{#each activeAnalysis.callbackPayload.upgradePlan as phase}
-									<article class="rounded-3xl border border-slate-200 bg-white p-5">
-										<div class="flex items-start justify-between gap-3">
-											<div>
-												<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-													Fase {phase.wave}
-												</p>
-												<h3 class="mt-2 text-lg font-semibold text-slate-950">{phase.title}</h3>
-											</div>
-										</div>
-										<p class="mt-3 text-sm leading-6 text-slate-600">{phase.rationale}</p>
-										<div class="mt-4 flex flex-wrap gap-2">
-											{#each phase.packages as packageName}
-												<span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-													{packageName}
-												</span>
-											{/each}
-										</div>
-									</article>
-								{/each}
-							</div>
-						{/if}
-
-						{#if activeAnalysis.callbackPayload?.packageBriefs.length}
-							<div class="mt-6 grid gap-4 xl:grid-cols-2">
-								{#each activeAnalysis.callbackPayload.packageBriefs as brief}
-									<article class="rounded-3xl border border-slate-200 bg-white p-5">
-										<h3 class="text-lg font-semibold text-slate-950">{brief.name}</h3>
-										<p class="mt-3 text-sm leading-6 text-slate-600">{brief.summary}</p>
-
-										{#if brief.breakingChanges.length}
-											<div class="mt-5">
-												<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-													Breaking changes
-												</p>
-												<ul class="mt-2 space-y-2 text-sm text-slate-700">
-													{#each brief.breakingChanges as change}
-														<li class="rounded-2xl bg-rose-50 px-3 py-2">{change}</li>
-													{/each}
-												</ul>
-											</div>
-										{/if}
-
-										{#if brief.testFocus.length}
-											<div class="mt-5">
-												<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-													Test focus
-												</p>
-												<div class="mt-2 flex flex-wrap gap-2">
-													{#each brief.testFocus as focus}
-														<span class="rounded-full bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-900">
-															{focus}
-														</span>
-													{/each}
-												</div>
-											</div>
-										{/if}
-									</article>
-								{/each}
-							</div>
-						{/if}
-
-						{#if activeAnalysis.callbackPayload?.sources.length}
-							<div class="mt-6 rounded-3xl border border-slate-200 bg-white p-5">
-								<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Fuentes</p>
-								<div class="mt-4 grid gap-3">
-									{#each activeAnalysis.callbackPayload.sources as source}
-										<a
-											class="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-white"
-											href={source.url}
-											target="_blank"
-											rel="noreferrer"
-										>
-											<span>
-												<span class="font-semibold text-slate-900">{source.packageName}</span>
-												<span class="ml-2 text-slate-500">{source.label}</span>
-											</span>
-											<span class="font-mono text-xs text-slate-500">open</span>
-										</a>
-									{/each}
-								</div>
-							</div>
-						{/if}
-					{:else if activeAnalysis.status === 'sending' || activeAnalysis.status === 'waiting_callback'}
-						<div class="mt-6 grid gap-4">
-							<div class="animate-pulse rounded-3xl border border-slate-200 bg-slate-50/90 p-6">
-								<div class="h-4 w-28 rounded-full bg-slate-200"></div>
-								<div class="mt-4 h-5 w-5/6 rounded-full bg-slate-200"></div>
-								<div class="mt-3 h-5 w-4/6 rounded-full bg-slate-200"></div>
-								<div class="mt-6 grid gap-3 sm:grid-cols-2">
-									<div class="h-28 rounded-2xl bg-white"></div>
-									<div class="h-28 rounded-2xl bg-white"></div>
-								</div>
-							</div>
+					{:else if activeAnalysis.status === 'failed'}
+						<div class="mt-6 rounded-3xl border border-dashed border-rose-300 bg-rose-50/70 p-6">
+							<p class="text-lg font-semibold text-rose-950">El brief no se pudo completar.</p>
+							<p class="mt-2 text-sm leading-6 text-rose-900">
+								La corrida quedó persistida con los datos técnicos disponibles para ayudarte a depurar el problema.
+							</p>
 						</div>
 					{:else}
-						<div class="mt-6 rounded-[1.75rem] border border-dashed border-slate-300 bg-white/70 p-8 text-center">
-							<p class="text-lg font-semibold text-slate-900">Aquí aparecerá el resultado del callback</p>
-							<p class="mt-2 text-sm leading-6 text-slate-500">
-								Cuando n8n responda, esta sección mostrará el resumen, el plan y los paquetes clave.
-							</p>
+						<div class="mt-6 animate-pulse rounded-3xl border border-slate-200 bg-slate-50/90 p-6">
+							<div class="h-4 w-24 rounded-full bg-slate-200"></div>
+							<div class="mt-4 h-5 w-5/6 rounded-full bg-slate-200"></div>
+							<div class="mt-3 h-5 w-4/6 rounded-full bg-slate-200"></div>
+							<div class="mt-6 h-32 rounded-3xl bg-white"></div>
+						</div>
+					{/if}
+
+					{#if activeAnalysis.callbackPayload?.upgradePlan.length}
+						<div class="mt-6 grid gap-4 lg:grid-cols-2">
+							{#each activeAnalysis.callbackPayload.upgradePlan as phase}
+								<article class="rounded-3xl border border-slate-200 bg-white p-5">
+									<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+										Fase {phase.wave}
+									</p>
+									<h3 class="mt-2 text-lg font-semibold text-slate-950">{phase.title}</h3>
+									<p class="mt-3 text-sm leading-6 text-slate-600">{phase.rationale}</p>
+									<div class="mt-4 flex flex-wrap gap-2">
+										{#each phase.packages as packageName}
+											<span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+												{packageName}
+											</span>
+										{/each}
+									</div>
+								</article>
+							{/each}
 						</div>
 					{/if}
 				</div>
+
+				<div class="rounded-[2rem] border border-slate-200/80 bg-white/85 p-6 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur">
+					<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Dependencias críticas</p>
+					<h2 class="mt-2 text-2xl font-bold text-slate-950">Lo primero que miraría un equipo</h2>
+
+					<div class="mt-6 grid gap-4 xl:grid-cols-2">
+						{#each criticalDependencies as dependency}
+							<article class="rounded-3xl border border-slate-200 bg-white p-5">
+								<div class="flex items-start justify-between gap-3">
+									<div>
+										<h3 class="text-lg font-semibold text-slate-950">{dependency.name}</h3>
+										<p class="mt-2 text-sm text-slate-500">
+											{dependency.currentVersion} → {dependency.latestVersion}
+										</p>
+									</div>
+									<div class="flex flex-wrap justify-end gap-2">
+										<span class={`rounded-full px-3 py-1 text-xs font-semibold ${getDiffTone(dependency.diffType)}`}>
+											{dependency.diffType}
+										</span>
+										<span class={`rounded-full px-3 py-1 text-xs font-semibold ${getDecisionTone(dependency.decision)}`}>
+											{dependency.decision}
+										</span>
+									</div>
+								</div>
+
+								<div class="mt-4 grid gap-3 sm:grid-cols-2">
+									<div class="rounded-2xl bg-slate-50 px-4 py-3">
+										<p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Grupo</p>
+										<p class="mt-1 text-sm font-medium text-slate-900">{dependency.group}</p>
+									</div>
+									<div class="rounded-2xl bg-slate-50 px-4 py-3">
+										<p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Risk score</p>
+										<p class="mt-1 text-sm font-medium text-slate-900">{dependency.riskScore}/100</p>
+									</div>
+								</div>
+
+								{#if dependency.deprecated}
+									<div class="mt-4 rounded-2xl border border-fuchsia-200 bg-fuchsia-50 px-4 py-3 text-sm text-fuchsia-950">
+										Este paquete aparece como deprecated y merece atención prioritaria.
+									</div>
+								{/if}
+
+								{#if dependency.sourceUrls.length}
+									<div class="mt-4 flex flex-wrap gap-2">
+										{#each dependency.sourceUrls as url}
+											<a
+												href={url}
+												target="_blank"
+												rel="noreferrer"
+												class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-200"
+											>
+												fuente
+											</a>
+										{/each}
+									</div>
+								{/if}
+							</article>
+						{/each}
+					</div>
+				</div>
+
+				{#if activeAnalysis.callbackPayload?.packageBriefs.length}
+					<div class="rounded-[2rem] border border-slate-200/80 bg-white/85 p-6 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur">
+						<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Paquetes explicados</p>
+						<h2 class="mt-2 text-2xl font-bold text-slate-950">Dónde mirar con más cuidado</h2>
+
+						<div class="mt-6 grid gap-4 xl:grid-cols-2">
+							{#each activeAnalysis.callbackPayload.packageBriefs as brief}
+								<article class="rounded-3xl border border-slate-200 bg-white p-5">
+									<h3 class="text-lg font-semibold text-slate-950">{brief.name}</h3>
+									<p class="mt-3 text-sm leading-6 text-slate-600">{brief.summary}</p>
+
+									{#if brief.breakingChanges.length}
+										<div class="mt-5">
+											<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+												Breaking changes
+											</p>
+											<ul class="mt-2 space-y-2 text-sm text-slate-700">
+												{#each brief.breakingChanges as change}
+													<li class="rounded-2xl bg-rose-50 px-3 py-2">{change}</li>
+												{/each}
+											</ul>
+										</div>
+									{/if}
+
+									{#if brief.testFocus.length}
+										<div class="mt-5">
+											<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+												Test focus
+											</p>
+											<div class="mt-2 flex flex-wrap gap-2">
+												{#each brief.testFocus as focus}
+													<span class="rounded-full bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-900">
+														{focus}
+													</span>
+												{/each}
+											</div>
+										</div>
+									{/if}
+								</article>
+							{/each}
+						</div>
+					</div>
+				{/if}
+
+				{#if activeAnalysis.callbackPayload?.sources.length}
+					<div class="rounded-[2rem] border border-slate-200/80 bg-white/85 p-6 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur">
+						<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Fuentes</p>
+						<h2 class="mt-2 text-2xl font-bold text-slate-950">Trazabilidad del brief</h2>
+
+						<div class="mt-6 grid gap-3">
+							{#each activeAnalysis.callbackPayload.sources as source}
+								<a
+									class="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-white"
+									href={source.url}
+									target="_blank"
+									rel="noreferrer"
+								>
+									<span>
+										<span class="font-semibold text-slate-900">{source.packageName}</span>
+										<span class="ml-2 text-slate-500">{source.label}</span>
+									</span>
+									<span class="font-mono text-xs text-slate-500">open</span>
+								</a>
+							{/each}
+						</div>
+					</div>
+				{/if}
 
 				<details class="group rounded-[2rem] border border-slate-200/80 bg-white/85 p-6 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)]">
 					<summary class="flex cursor-pointer list-none items-center justify-between gap-3">
@@ -372,7 +582,7 @@
 							<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
 								Panel técnico
 							</p>
-							<h2 class="mt-2 text-2xl font-bold text-slate-950">Request y callback crudos</h2>
+							<h2 class="mt-2 text-2xl font-bold text-slate-950">Payload y callback crudos</h2>
 						</div>
 						<span class="text-sm font-medium text-slate-500 transition group-open:rotate-45">+</span>
 					</summary>

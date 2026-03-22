@@ -1,42 +1,67 @@
-# sv
+# Package Version Wizard
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Package Version Wizard es un MVP de hackathon construido con `SvelteKit + Bun + Tailwind + Postgres + n8n`.
 
-## Creating a project
+Subes un `package.json`, la app:
 
-If you're seeing this, you've probably already done this step. Congrats!
+1. parsea dependencias de forma determinista
+2. consulta npm registry
+3. calcula riesgo preliminar y prioridades
+4. dispara un workflow privado de `n8n`
+5. recibe un callback firmado con el brief AI
+6. expone el resultado en `/analysis/[id]`
 
-```sh
-# create a new project
-npx sv create my-app
+## Stack
+
+- Runtime: Bun
+- Framework: SvelteKit
+- UI: Tailwind CSS v4
+- Persistencia: Postgres vía `Bun.SQL`
+- Automatización y AI: n8n
+
+## Variables de entorno
+
+Copia `.env.example` a `.env` y completa:
+
+```bash
+DATABASE_URL=
+N8N_ANALYSIS_WEBHOOK_URL=
+N8N_ANALYSIS_WEBHOOK_TOKEN=
+N8N_CALLBACK_SECRET=
+PUBLIC_APP_URL=
+N8N_INTERNAL_API_TOKEN=
 ```
 
-To recreate this project with the same configuration:
+## Desarrollo
 
-```sh
-# recreate this project
-bun x sv@0.12.8 create --template minimal --types ts --add prettier eslint tailwindcss="plugins:typography,forms" --install bun package-version-wizard
+```bash
+bun install
+bun run dev
 ```
 
-## Developing
+## Base de datos
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+```bash
+bun run db:ping
+bun run db:migrate
 ```
 
-## Building
+La documentación técnica del esquema está en [`BD.md`](./BD.md).
 
-To create a production version of your app:
+## Producción
 
-```sh
-npm run build
+```bash
+bun run build
+bun run start
 ```
 
-You can preview the production build with `npm run preview`.
+El contenedor también puede ejecutar migraciones al arrancar según el `entrypoint`.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## Rutas principales
+
+- `/` upload wizard
+- `/analysis/[id]` vista compartible del resultado
+- `/api/analyses/[id]` polling del estado
+- `/api/internal/n8n/callback` callback firmado desde n8n
+- `/api/internal/radar/subscriptions` feed interno para radar continuo
+- `/api/internal/radar/reanalyze` reanálisis interno por proyecto

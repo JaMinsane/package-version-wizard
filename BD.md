@@ -2,42 +2,40 @@
 
 ## Objetivo
 
-La app deja de depender de memoria local y pasa a usar Postgres como fuente de verdad para:
+Postgres es la fuente de verdad de Package Version Wizard. La base guarda:
 
-- corridas persistidas de análisis
-- historial por proyecto
-- deduplicación de callbacks de n8n
-- crecimiento futuro hacia uploads reales, rechecks y automatizaciones
+- proyectos persistidos
+- análisis compartibles por URL
+- snapshots de dependencias y riesgo
+- artefactos AI devueltos por n8n
+- receipts de callback para idempotencia
+- suscripciones Slack para radar continuo
 
 La integración usa `Bun.SQL` nativo. No hay ORM.
-Como la capa de datos depende de `Bun.SQL`, el runtime de producción debe ejecutarse con Bun.
-El contenedor de producción ejecuta `bun run db:migrate` al arrancar y luego levanta la app.
 
-## Arquitectura
+## Capa de datos
 
-### Capa de acceso
+- `src/lib/server/db/client.ts`: singleton de `Bun.SQL` en runtime
+- `src/lib/server/db/migrate.ts`: runner de migraciones con `schema_migrations`
+- `src/lib/server/analysis/repository.ts`: queries y mapeo entre SQL y el dominio
+- `scripts/db/ping.ts`: prueba de conexión
+- `scripts/db/migrate.ts`: ejecución manual de migraciones
 
-- `src/lib/server/db/client.ts`: singleton de `Bun.SQL` para la app
-- `src/lib/server/db/migrate.ts`: runner de migraciones con tabla `schema_migrations`
-- `src/lib/server/analysis/repository.ts`: queries y mapeo entre Postgres y tipos de dominio
-- `src/lib/server/analysis/service.ts`: orquestación de demo, dispatch a n8n y callback
-
-### Estrategia de migraciones
+## Estrategia de migraciones
 
 - Las migraciones viven en `src/lib/server/db/migrations`
-- `bun run db:migrate` crea `schema_migrations` si no existe
-- Cada archivo `.sql` se aplica una sola vez, en orden lexicográfico
-- Cada migración se ejecuta dentro de transacción
-- El arranque del contenedor puede correr migraciones en cada deploy sin reescribir esquema ya aplicado
+- Se aplican una sola vez en orden lexicográfico
+- Cada archivo corre dentro de una transacción
+- El contenedor puede ejecutar `bun run db:migrate` en cada deploy sin reescribir lo ya aplicado
 
 ## Modelo relacional
 
 ### `projects`
 
-Representa una identidad lógica reutilizable del proyecto.
+Identidad lógica del proyecto.
 
 - `id`: PK textual generada en la app
-- `slug`: clave única estable
+- `slug`: slug reutilizable y único
 - `name`: nombre visible del proyecto
 - `ecosystem`: hoy fijo en `npm`
 
@@ -45,57 +43,66 @@ Representa una identidad lógica reutilizable del proyecto.
 
 Snapshot completo de una corrida.
 
-- `id`: PK textual, igual al `analysisId`
+- `id`: PK textual igual al `analysisId`
 - `project_id`: FK a `projects`
-- `status`: `sending | waiting_callback | completed | failed`
+- `status`: `queued | enriching | summarizing | completed | failed`
+- `manifest_name`: nombre original del archivo
+- `manifest_json`: contenido persistido del `package.json`
+- `stats_json`: métricas agregadas visibles en UI
 - `request_payload_json`: payload enviado a n8n
 - `callback_payload_json`: payload recibido desde n8n
-- `summary_markdown` / `summary_html`: artefactos renderizables
+- `summary_markdown` / `summary_html`: brief renderizable
 - `upgrade_plan_json`, `package_briefs_json`, `sources_json`: bloques estructurados para UI
-- `webhook_response_json`: respuesta inicial de aceptación del webhook
+- `slack_digest_markdown`: digest reutilizable para automations
+- `webhook_response_json`: respuesta inicial del webhook a n8n
 - `error_message`: fallo terminal si aplica
-- `last_idempotency_key`: último callback aplicado
+- `last_idempotency_key`: callback aplicado más reciente
 
 ### `analysis_dependencies`
 
 Snapshot normalizado de dependencias por análisis.
 
 - una fila por paquete y grupo
-- guarda versiones, tipo de diff, `deprecated`, score y metadata básica
+- guarda versiones, diff, `deprecated`, score, decisión preliminar y fuentes
 
 ### `automation_subscriptions`
 
-Esquema listo para alertas y rechecks futuros. No tiene UI todavía.
+Suscripciones del proyecto a automatizaciones continuas.
+
+- hoy solo `channel_type = 'slack'`
+- `channel_target`: canal o destino
+- `frequency`: `daily | weekdays | twice_daily`
+- `enabled`: estado actual de la suscripción
 
 ### `analysis_callback_receipts`
 
-Soporte de idempotencia del callback.
+Soporte de idempotencia del callback de n8n.
 
-- un `idempotency_key` se aplica una sola vez
+- un `x-idempotency-key` se aplica una sola vez
 - guarda `payload_hash` para trazabilidad
 
 ## Reglas operativas
 
 ### Estados
 
-- `sending`: análisis creado antes del dispatch a n8n
-- `waiting_callback`: n8n aceptó el webhook
-- `completed`: callback exitoso y persistido
-- `failed`: fallo de dispatch o callback fallido
-
-### Timestamps
-
-- `created_at`: creación del registro
-- `updated_at`: última mutación
-- `completed_at`: momento terminal del análisis
-- `received_at`: llegada del callback deduplicado
+- `queued`: análisis creado y persistido
+- `enriching`: el backend consulta npm y calcula riesgo preliminar
+- `summarizing`: n8n aceptó el webhook y está generando el brief
+- `completed`: callback válido aplicado
+- `failed`: error terminal de dispatch, enriquecimiento o callback
 
 ### Idempotencia
 
 - El callback exige `x-idempotency-key`
-- Se inserta primero en `analysis_callback_receipts`
-- Si la key ya existe, el callback se trata como duplicado
-- Si el análisis ya está en estado terminal, no se reaplica aunque llegue otra key
+- La app inserta primero en `analysis_callback_receipts`
+- Si la key ya existe, responde como duplicado
+- Si el análisis ya es terminal, no reaplica artefactos aunque llegue otra key
+
+### Radar continuo
+
+- Las suscripciones activas se leen desde `automation_subscriptions`
+- El endpoint interno de radar reutiliza `manifest_json` del último análisis del proyecto
+- Los deep links a Slack se construyen con `PUBLIC_APP_URL`
 
 ## Diagramas
 
@@ -121,6 +128,8 @@ erDiagram
         text id PK
         text project_id FK
         text status
+        text manifest_name
+        jsonb manifest_json
         jsonb stats_json
         jsonb request_payload_json
         jsonb callback_payload_json
@@ -132,7 +141,6 @@ erDiagram
         text slack_digest_markdown
         jsonb webhook_response_json
         text error_message
-        text n8n_execution_id
         text last_idempotency_key
         timestamptz created_at
         timestamptz updated_at
@@ -181,30 +189,42 @@ erDiagram
 ```mermaid
 sequenceDiagram
     participant U as Usuario
-    participant W as Landing SvelteKit
-    participant A as Action runDemo
+    participant W as Wizard SvelteKit
+    participant A as Action analyzePackageJson
     participant DB as Postgres
     participant N as n8n
     participant C as Callback interno
     participant P as Polling /api/analyses/[id]
 
-    U->>W: Click en "Probar flujo con n8n"
+    U->>W: Upload de package.json
     W->>A: POST form action
-    A->>DB: upsert project + create analysis + insert dependencies
+    A->>DB: create project + analysis queued
+    A->>DB: update enriching + persist dependencies
     A->>N: POST webhook privado
     N-->>A: 202 accepted
-    A->>DB: update analysis -> waiting_callback
+    A->>DB: update analysis -> summarizing
     A-->>W: redirect /analysis/[id]
     W->>P: GET /api/analyses/[id]
-    P->>DB: read analysis snapshot
-    DB-->>P: status waiting_callback
+    P->>DB: read snapshot
+    DB-->>P: status summarizing
     N->>C: POST /api/internal/n8n/callback
-    C->>DB: validate analysis + insert receipt + persist artifacts
+    C->>DB: validate + insert receipt + persist artifacts
     DB-->>C: committed
     W->>P: polling corto
     P->>DB: read completed analysis
     DB-->>P: completed + summary
     P-->>W: snapshot final
+```
+
+## Variables relevantes
+
+```bash
+DATABASE_URL=
+PUBLIC_APP_URL=
+N8N_ANALYSIS_WEBHOOK_URL=
+N8N_ANALYSIS_WEBHOOK_TOKEN=
+N8N_CALLBACK_SECRET=
+N8N_INTERNAL_API_TOKEN=
 ```
 
 ## Comandos
@@ -214,6 +234,3 @@ bun run db:ping
 bun run db:migrate
 bun run start
 ```
-
-Ambos comandos esperan `DATABASE_URL` en el entorno.
-En Docker, las migraciones se ejecutan automáticamente al arrancar salvo que `RUN_DB_MIGRATIONS=false`.

@@ -10,5 +10,9 @@ export const GET: RequestHandler = async ({ params }) => {
 		return json({ message: 'Ese análisis no existe o ya no está disponible.' }, { status: 404 });
 	}
 
-	return json(analysis);
+	return json(analysis, {
+		headers: {
+			'cache-control': 'no-store'
+		}
+	});
 };
