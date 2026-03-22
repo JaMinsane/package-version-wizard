@@ -17,7 +17,7 @@ COPY --from=deps-dev /app/node_modules ./node_modules
 COPY . .
 RUN bun run build
 
-FROM node:22-bookworm-slim AS runtime
+FROM oven/bun:${BUN_VERSION} AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production \
@@ -25,12 +25,12 @@ ENV NODE_ENV=production \
     PORT=3000 \
     BODY_SIZE_LIMIT=1M
 
-COPY --chown=node:node package.json ./
-COPY --from=deps-prod --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/build ./build
+COPY --chown=bun:bun package.json ./
+COPY --from=deps-prod --chown=bun:bun /app/node_modules ./node_modules
+COPY --from=builder --chown=bun:bun /app/build ./build
 
-USER node
+USER bun
 
 EXPOSE 3000
 
-CMD ["node", "build"]
+CMD ["bun", "build/index.js"]

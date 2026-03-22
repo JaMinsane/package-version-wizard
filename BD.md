@@ -10,6 +10,7 @@ La app deja de depender de memoria local y pasa a usar Postgres como fuente de v
 - crecimiento futuro hacia uploads reales, rechecks y automatizaciones
 
 La integración usa `Bun.SQL` nativo. No hay ORM.
+Como la capa de datos depende de `Bun.SQL`, el runtime de producción debe ejecutarse con Bun.
 
 ## Arquitectura
 
@@ -209,6 +210,7 @@ sequenceDiagram
 ```bash
 bun run db:ping
 bun run db:migrate
+bun run start
 ```
 
 Ambos comandos esperan `DATABASE_URL` en el entorno.
