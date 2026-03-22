@@ -11,6 +11,7 @@ La app deja de depender de memoria local y pasa a usar Postgres como fuente de v
 
 La integración usa `Bun.SQL` nativo. No hay ORM.
 Como la capa de datos depende de `Bun.SQL`, el runtime de producción debe ejecutarse con Bun.
+El contenedor de producción ejecuta `bun run db:migrate` al arrancar y luego levanta la app.
 
 ## Arquitectura
 
@@ -27,6 +28,7 @@ Como la capa de datos depende de `Bun.SQL`, el runtime de producción debe ejecu
 - `bun run db:migrate` crea `schema_migrations` si no existe
 - Cada archivo `.sql` se aplica una sola vez, en orden lexicográfico
 - Cada migración se ejecuta dentro de transacción
+- El arranque del contenedor puede correr migraciones en cada deploy sin reescribir esquema ya aplicado
 
 ## Modelo relacional
 
@@ -214,3 +216,4 @@ bun run start
 ```
 
 Ambos comandos esperan `DATABASE_URL` en el entorno.
+En Docker, las migraciones se ejecutan automáticamente al arrancar salvo que `RUN_DB_MIGRATIONS=false`.

@@ -28,9 +28,14 @@ ENV NODE_ENV=production \
 COPY --chown=bun:bun package.json ./
 COPY --from=deps-prod --chown=bun:bun /app/node_modules ./node_modules
 COPY --from=builder --chown=bun:bun /app/build ./build
+COPY --from=builder --chown=bun:bun /app/scripts ./scripts
+COPY --from=builder --chown=bun:bun /app/src/lib/server/db ./src/lib/server/db
+COPY --chown=bun:bun docker/entrypoint.sh ./docker/entrypoint.sh
+
+RUN chmod +x /app/docker/entrypoint.sh
 
 USER bun
 
 EXPOSE 3000
 
-CMD ["bun", "build/index.js"]
+CMD ["/app/docker/entrypoint.sh"]
