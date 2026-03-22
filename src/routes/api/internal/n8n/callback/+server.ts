@@ -2,7 +2,11 @@ import { env } from '$env/dynamic/private';
 import { json } from '@sveltejs/kit';
 
 import type { RequestHandler } from './$types';
-import { parseN8nCallbackPayload, persistN8nCallback } from '$lib/server/analysis/service';
+import {
+	failAnalysisFromInvalidN8nCallback,
+	parseN8nCallbackPayload,
+	persistN8nCallback
+} from '$lib/server/analysis/service';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const expectedSignature = env.N8N_CALLBACK_SECRET;
@@ -38,6 +42,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : 'El callback de n8n no cumple el contrato esperado.';
+
+		await failAnalysisFromInvalidN8nCallback(body, message);
 
 		return json({ message }, { status: 400 });
 	}

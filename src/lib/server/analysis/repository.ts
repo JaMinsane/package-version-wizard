@@ -329,6 +329,23 @@ export async function markAnalysisFailed(id: string, message: string) {
 	`;
 }
 
+export async function markAnalysisFailedIfPending(id: string, message: string) {
+	const db = getDb();
+	const rows = await db<{ id: string }[]>`
+		UPDATE analyses
+		SET
+			status = ${'failed'},
+			error_message = ${message},
+			updated_at = now(),
+			completed_at = now()
+		WHERE id = ${id}
+			AND status NOT IN (${'completed'}, ${'failed'})
+		RETURNING id
+	`;
+
+	return rows.length > 0;
+}
+
 export async function applyCallback(
 	idempotencyKey: string,
 	payload: N8nAnalysisCallback,

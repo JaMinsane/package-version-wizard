@@ -25,6 +25,7 @@ import {
 	getProjectById,
 	listRadarSubscriptions,
 	markAnalysisFailed,
+	markAnalysisFailedIfPending,
 	markAnalysisWebhookAccepted,
 	savePreparedAnalysisData,
 	saveSlackSubscription,
@@ -37,7 +38,7 @@ const MAX_N8N_CANDIDATES = 24;
 const ANALYSIS_TIMEOUTS_MS = {
 	queued: 60_000,
 	enriching: 120_000,
-	summarizing: 300_000
+	summarizing: 250_000
 } as const;
 const ANALYSIS_TIMEOUT_MESSAGE = 'El análisis excedió el tiempo máximo de espera del workflow.';
 
@@ -201,6 +202,19 @@ export async function persistN8nCallback(
 	return applyCallback(idempotencyKey, payload, payloadHash);
 }
 
+export async function failAnalysisFromInvalidN8nCallback(value: unknown, errorMessage: string) {
+	const analysisId = tryExtractAnalysisIdFromCallback(value);
+
+	if (!analysisId) {
+		return false;
+	}
+
+	return markAnalysisFailedIfPending(
+		analysisId,
+		`n8n envió un callback inválido: ${errorMessage}`
+	);
+}
+
 export function parseN8nCallbackPayload(value: unknown): N8nAnalysisCallback {
 	const record = asRecord(value, 'payload');
 	const status = asStatus(record.status);
@@ -339,6 +353,16 @@ function asRecord(value: unknown, fieldName: string): Record<string, unknown> {
 	}
 
 	return value as Record<string, unknown>;
+}
+
+function tryExtractAnalysisIdFromCallback(value: unknown) {
+	if (!value || typeof value !== 'object' || Array.isArray(value)) {
+		return null;
+	}
+
+	const analysisId = (value as Record<string, unknown>).analysisId;
+
+	return typeof analysisId === 'string' && analysisId.trim() ? analysisId : null;
 }
 
 function asString(value: unknown, fieldName: string): string {
