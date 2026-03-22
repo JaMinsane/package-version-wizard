@@ -34,6 +34,12 @@ import { sendAnalysisToN8n } from '$lib/server/n8n/client';
 import { parsePackageJsonText } from '$lib/server/package-json/manifest';
 
 const MAX_N8N_CANDIDATES = 24;
+const ANALYSIS_TIMEOUTS_MS = {
+	queued: 60_000,
+	enriching: 120_000,
+	summarizing: 300_000
+} as const;
+const ANALYSIS_TIMEOUT_MESSAGE = 'El análisis excedió el tiempo máximo de espera del workflow.';
 
 interface SlackSubscriptionInput {
 	enabled: boolean;
@@ -134,6 +140,21 @@ export async function startReanalysisFromProject(projectId: string) {
 }
 
 export async function getAnalysisSnapshot(id: string): Promise<AnalysisSnapshot | null> {
+	const analysis = await getAnalysisById(id);
+
+	if (!analysis) {
+		return null;
+	}
+
+	if (!hasAnalysisTimedOut(analysis)) {
+		return analysis;
+	}
+
+	await setAnalysisStatus(id, 'failed', {
+		errorMessage: ANALYSIS_TIMEOUT_MESSAGE,
+		completedAt: true
+	});
+
 	return getAnalysisById(id);
 }
 
@@ -183,6 +204,18 @@ export async function persistN8nCallback(
 export function parseN8nCallbackPayload(value: unknown): N8nAnalysisCallback {
 	const record = asRecord(value, 'payload');
 	const status = asStatus(record.status);
+
+	if (status === 'failed') {
+		return {
+			analysisId: asString(record.analysisId, 'analysisId'),
+			status,
+			executiveSummaryMd: asFailureSummary(record),
+			upgradePlan: [],
+			packageBriefs: [],
+			slackDigestMd: undefined,
+			sources: []
+		};
+	}
 
 	return {
 		analysisId: asString(record.analysisId, 'analysisId'),
@@ -275,6 +308,22 @@ function normalizeBaseUrl(value: string | undefined) {
 	return value?.trim().replace(/\/$/, '') || undefined;
 }
 
+function hasAnalysisTimedOut(analysis: AnalysisSnapshot) {
+	if (analysis.status === 'completed' || analysis.status === 'failed') {
+		return false;
+	}
+
+	const timeoutMs = ANALYSIS_TIMEOUTS_MS[analysis.status];
+
+	if (!timeoutMs) {
+		return false;
+	}
+
+	const updatedAtMs = new Date(analysis.updatedAt).getTime();
+
+	return Number.isFinite(updatedAtMs) && Date.now() - updatedAtMs > timeoutMs;
+}
+
 function slugify(value: string) {
 	return value
 		.trim()
@@ -314,6 +363,22 @@ function asUndefinedOrString(value: unknown): string | undefined {
 	}
 
 	return asString(value, 'slackDigestMd');
+}
+
+function asFailureSummary(record: Record<string, unknown>) {
+	const message = record.message;
+
+	if (typeof message === 'string' && message.trim()) {
+		return message;
+	}
+
+	const executiveSummary = record.executiveSummaryMd;
+
+	if (typeof executiveSummary === 'string' && executiveSummary.trim()) {
+		return executiveSummary;
+	}
+
+	return 'No se pudo generar el brief final en n8n.';
 }
 
 function asStatus(value: unknown): 'completed' | 'failed' {
