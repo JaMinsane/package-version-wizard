@@ -1,17 +1,13 @@
 import { env } from '$env/dynamic/private';
-import { redirect } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 
 import type { Actions, PageServerLoad } from './$types';
-import { buildDemoAnalysisRequest } from '$lib/server/demo/payload';
-import { createDemoRun, getDemoRun, markWebhookAccepted, markWebhookFailed } from '$lib/server/demo/store';
-import { sendAnalysisToN8n } from '$lib/server/n8n/client';
+import { startDemoAnalysis } from '$lib/server/analysis/service';
 
-export const load: PageServerLoad = async ({ url }) => {
-	const runId = url.searchParams.get('run');
-
+export const load: PageServerLoad = async () => {
 	return {
-		activeRun: runId ? getDemoRun(runId) : null,
 		environmentReady: {
+			databaseConfigured: Boolean(env.DATABASE_URL),
 			webhookConfigured: Boolean(env.N8N_ANALYSIS_WEBHOOK_URL && env.N8N_ANALYSIS_WEBHOOK_TOKEN),
 			callbackConfigured: Boolean(env.N8N_CALLBACK_SECRET)
 		}
@@ -20,19 +16,19 @@ export const load: PageServerLoad = async ({ url }) => {
 
 export const actions: Actions = {
 	runDemo: async () => {
-		const requestPayload = buildDemoAnalysisRequest();
-
-		createDemoRun(requestPayload);
+		let analysisId: string;
 
 		try {
-			const response = await sendAnalysisToN8n(requestPayload);
-			markWebhookAccepted(requestPayload.analysisId, response);
+			({ analysisId } = await startDemoAnalysis());
 		} catch (error) {
-			const message =
-				error instanceof Error ? error.message : 'No se pudo enviar la corrida demo a n8n.';
-			markWebhookFailed(requestPayload.analysisId, message);
+			return fail(500, {
+				message:
+					error instanceof Error
+						? error.message
+						: 'No se pudo iniciar la corrida demo persistida.'
+			});
 		}
 
-		throw redirect(303, `/?run=${requestPayload.analysisId}`);
+		throw redirect(303, `/analysis/${analysisId}`);
 	}
 };

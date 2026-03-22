@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/private';
 
-import type { N8nAnalysisRequest } from '$lib/server/demo/types';
+import type { N8nAnalysisRequest } from '$lib/server/analysis/types';
 
 const REQUEST_TIMEOUT_MS = 15_000;
 

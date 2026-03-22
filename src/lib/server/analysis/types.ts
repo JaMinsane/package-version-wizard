@@ -8,7 +8,7 @@ export type DiffType = 'patch' | 'minor' | 'major' | 'unknown';
 
 export type CallbackStatus = 'completed' | 'failed';
 
-export type DemoRunStatus = 'sending' | 'waiting_callback' | 'completed' | 'failed';
+export type AnalysisStatus = 'sending' | 'waiting_callback' | 'completed' | 'failed';
 
 export interface DependencyCandidate {
 	name: string;
@@ -34,7 +34,7 @@ export interface N8nAnalysisRequest {
 	candidates: DependencyCandidate[];
 }
 
-export interface UpgradeWave {
+export interface UpgradePhase {
 	wave: number;
 	title: string;
 	rationale: string;
@@ -58,17 +58,26 @@ export interface N8nAnalysisCallback {
 	analysisId: string;
 	status: CallbackStatus;
 	executiveSummaryMd: string;
-	upgradePlan: UpgradeWave[];
+	upgradePlan: UpgradePhase[];
 	packageBriefs: PackageBrief[];
 	slackDigestMd?: string;
 	sources: SourceLink[];
 }
 
-export interface DemoRunSnapshot {
+export interface ProjectSnapshot {
 	id: string;
-	status: DemoRunStatus;
+	slug: string;
+	name: string;
+	ecosystem: 'npm';
+}
+
+export interface AnalysisSnapshot {
+	id: string;
+	project: ProjectSnapshot;
+	status: AnalysisStatus;
 	createdAt: string;
-	requestSentAt?: string;
+	updatedAt: string;
+	completedAt?: string;
 	callbackReceivedAt?: string;
 	requestPayload: N8nAnalysisRequest;
 	callbackPayload?: N8nAnalysisCallback;

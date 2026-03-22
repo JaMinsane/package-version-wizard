@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { N8nAnalysisRequest } from '$lib/server/demo/types';
+import type { N8nAnalysisRequest } from '$lib/server/analysis/types';
 
 export function buildDemoAnalysisRequest(): N8nAnalysisRequest {
 	return {
