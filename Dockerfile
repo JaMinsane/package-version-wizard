@@ -4,11 +4,11 @@ FROM oven/bun:${BUN_VERSION} AS base
 WORKDIR /app
 
 FROM base AS deps-dev
-COPY package.json bun.lock ./
+COPY package.json bun.lock .npmrc ./
 RUN bun install --frozen-lockfile
 
 FROM base AS deps-prod
-COPY package.json bun.lock ./
+COPY package.json bun.lock .npmrc ./
 RUN bun install --frozen-lockfile --production
 
 FROM base AS builder
