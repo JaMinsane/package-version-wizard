@@ -58,6 +58,11 @@ Snapshot completo de una corrida.
 - `error_message`: fallo terminal si aplica
 - `last_idempotency_key`: callback aplicado más reciente
 
+`sources_json` no es un espejo ciego del modelo. La app persiste únicamente fuentes que ya pasaron la whitelist del workflow:
+
+- en `package-research`, la URL debe existir en la evidencia recopilada para ese paquete
+- en `dependency-analysis`, la URL debe existir en la consolidación base del análisis
+
 ### `analysis_dependencies`
 
 Snapshot normalizado de dependencias por análisis.
@@ -91,12 +96,23 @@ Soporte de idempotencia del callback de n8n.
 - `completed`: callback válido aplicado
 - `failed`: error terminal de dispatch, enriquecimiento o callback
 
+Notas:
+
+- `completed` puede representar una síntesis completa o una síntesis degradada si el workflow padre logró conservar `packageBriefs` y fuentes válidas aunque el LLM final falle.
+- `failed` se reserva para errores sin artefactos útiles o callbacks inválidos que no pueden normalizarse.
+
 ### Idempotencia
 
 - El callback exige `x-idempotency-key`
 - La app inserta primero en `analysis_callback_receipts`
 - Si la key ya existe, responde como duplicado
 - Si el análisis ya es terminal, no reaplica artefactos aunque llegue otra key
+
+### Trazabilidad y resiliencia del callback
+
+- El callback final desde n8n a la app está firmado con `x-n8n-signature`.
+- El workflow padre aplica timeout y retries en la entrega del callback para tolerar fallos transitorios de red.
+- La app valida el contrato estructural del callback antes de persistirlo.
 
 ### Radar continuo
 

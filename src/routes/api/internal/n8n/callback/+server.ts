@@ -2,6 +2,7 @@ import { env } from '$env/dynamic/private';
 import { json } from '@sveltejs/kit';
 
 import type { RequestHandler } from './$types';
+import type { N8nAnalysisCallback } from '$lib/server/analysis/types';
 import {
 	failAnalysisFromInvalidN8nCallback,
 	parseN8nCallbackPayload,
@@ -35,7 +36,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({ message: 'El callback de n8n no contiene JSON válido.' }, { status: 400 });
 	}
 
-	let payload: ReturnType<typeof parseN8nCallbackPayload>;
+	let payload: N8nAnalysisCallback;
 
 	try {
 		payload = parseN8nCallbackPayload(body);

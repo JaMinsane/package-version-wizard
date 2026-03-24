@@ -1,0 +1,451 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dependency-analysis",
+        "authentication": "headerAuth",
+        "options": {
+          "responseCode": {
+            "values": {
+              "responseCode": "customCode",
+              "customCode": 202
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -5808,
+        944
+      ],
+      "id": "50f1d2f8-6657-4e00-83ff-a77a7b1167ed",
+      "name": "dependency-analysis",
+      "webhookId": "dependency-analysis",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wQR0dQEh1U9f6Jt6",
+          "name": "n8n-auth-header"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const incoming = $input.first().json;\nconst payload = incoming.body ?? incoming;\nfor (const key of ['analysisId', 'projectName', 'dependencyStats', 'candidates']) {\n  if (payload[key] === undefined || payload[key] === null) {\n    throw new Error(`Missing field: ${key}`);\n  }\n}\nif (!Array.isArray(payload.candidates)) {\n  throw new Error('candidates must be an array');\n}\nreturn [{ json: { analysisId: String(payload.analysisId), projectName: String(payload.projectName), dependencyStats: { total: Number(payload.dependencyStats.total ?? 0), outdated: Number(payload.dependencyStats.outdated ?? 0), majors: Number(payload.dependencyStats.majors ?? 0), deprecated: Number(payload.dependencyStats.deprecated ?? 0) }, candidates: payload.candidates.map((candidate) => ({ name: String(candidate.name ?? ''), currentVersion: String(candidate.currentVersion ?? ''), latestVersion: String(candidate.latestVersion ?? ''), group: String(candidate.group ?? 'dependencies'), diffType: String(candidate.diffType ?? 'unknown'), deprecated: Boolean(candidate.deprecated ?? false), publishedAt: candidate.publishedAt ?? null, repositoryUrl: candidate.repositoryUrl ?? null, riskScore: Number(candidate.riskScore ?? 0), sourceUrls: Array.isArray(candidate.sourceUrls) ? candidate.sourceUrls.map((entry) => String(entry)) : [] })).filter((candidate) => candidate.name.length > 0) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5568,
+        944
+      ],
+      "id": "5e873347-6320-403f-9179-295bcc9e4fd9",
+      "name": "Validate input"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst normalizeUrl = (value) => {\n  if (!value || typeof value !== 'string') return null;\n  return value.replace(/^git\\+/, '').replace(/\\.git$/i, '').replace(/^ssh:\\/\\/git@github.com\\//, 'https://github.com/').replace(/^git@github.com:/, 'https://github.com/').replace(/^git:\\/\\//, 'https://');\n};\nconst candidates = input.candidates.map((candidate) => {\n  const repositoryUrl = normalizeUrl(candidate.repositoryUrl);\n  const sourceUrls = Array.isArray(candidate.sourceUrls) ? candidate.sourceUrls.map((url) => normalizeUrl(url)).filter(Boolean) : [];\n  if (repositoryUrl && !sourceUrls.includes(repositoryUrl)) {\n    sourceUrls.push(repositoryUrl);\n  }\n  if (!sourceUrls.some((url) => url.includes('npmjs.com/package'))) {\n    sourceUrls.unshift(`https://www.npmjs.com/package/${candidate.name}`);\n  }\n  return { ...candidate, repositoryUrl, sourceUrls, publishedAt: candidate.publishedAt || null, riskScore: Math.max(0, Math.min(100, Number(candidate.riskScore ?? 0))) };\n}).sort((left, right) => right.riskScore - left.riskScore || left.name.localeCompare(right.name));\nreturn [{ json: { ...input, candidates } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5328,
+        944
+      ],
+      "id": "297d08d6-4b18-4428-a2be-53a46c272f2e",
+      "name": "Normalize candidates"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst ranked = [...data.candidates];\nconst deepNames = new Set();\nfor (const candidate of ranked) {\n  if (candidate.diffType === 'major' || candidate.deprecated) {\n    deepNames.add(candidate.name);\n  }\n}\nfor (const candidate of ranked) {\n  if (deepNames.size >= 8) break;\n  deepNames.add(candidate.name);\n}\nconst deepCandidates = ranked.filter((candidate) => deepNames.has(candidate.name)).slice(0, 8);\nconst shallowCandidates = ranked.filter((candidate) => !deepNames.has(candidate.name));\nconst quickWins = ranked.filter((candidate) => ['patch', 'minor'].includes(candidate.diffType) && !candidate.deprecated).slice(0, 8);\nconst highRisk = ranked.filter((candidate) => candidate.diffType === 'major' || candidate.deprecated || candidate.riskScore >= 70).slice(0, 8);\nreturn [{ json: { analysisId: data.analysisId, projectName: data.projectName, dependencyStats: data.dependencyStats, allCandidates: ranked, deepCandidates, shallowCandidates, quickWins, highRisk, totalDeepCandidates: deepCandidates.length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5088,
+        944
+      ],
+      "id": "fd7cc894-d437-4d40-9049-43b63a19005a",
+      "name": "Tier packages"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ String((($json.deepCandidates ?? [])[0]?.name) ?? '') }}",
+              "operation": "notEmpty"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -4848,
+        944
+      ],
+      "id": "01720e89-fcef-4a11-80c5-0f7bd515f8e1",
+      "name": "IF deep candidates?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst deepCandidates = Array.isArray(data.deepCandidates) ? data.deepCandidates : [];\nreturn deepCandidates.map((deepCandidate, index) => ({\n  json: {\n    analysisId: data.analysisId,\n    projectName: data.projectName,\n    dependencyStats: data.dependencyStats,\n    allCandidates: data.allCandidates,\n    deepCandidate,\n    candidatePosition: index + 1,\n    totalDeepCandidates: deepCandidates.length,\n    skipResearch: false\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4608,
+        944
+      ],
+      "id": "5ed115bd-298c-4d31-929d-bcca370520a1",
+      "name": "Prepare deep research items"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "eKaIlg2SgQNSQqgn",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/eKaIlg2SgQNSQqgn",
+          "cachedResultName": "package-research"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "analysisId": "={{ $json.analysisId }}",
+            "projectName": "={{ $json.projectName }}",
+            "dependencyStats": "={{ $json.dependencyStats }}",
+            "allCandidates": "={{ $json.allCandidates }}",
+            "deepCandidate": "={{ $json.deepCandidate }}",
+            "candidatePosition": "={{ $json.candidatePosition }}",
+            "totalDeepCandidates": "={{ $json.totalDeepCandidates }}",
+            "skipResearch": "={{ $json.skipResearch }}"
+          },
+          "schema": []
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -4368,
+        944
+      ],
+      "id": "dba4c1c6-5e3e-4777-9b5b-cc1485a55326",
+      "name": "Call 'package-research'",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Tier packages').first().json;\nconst deepBriefs = $input.all().map((item) => item.json?.packageBrief).filter(Boolean);\nconst shallowCandidates = Array.isArray(base.shallowCandidates) ? base.shallowCandidates : [];\nconst formatDate = (value) => {\n  if (!value) return null;\n  const parsed = new Date(value);\n  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);\n};\nconst summarize = (candidate) => {\n  const publishedAt = formatDate(candidate.publishedAt);\n  const tone = candidate.deprecated ? 'Evidencia parcial basada en npm metadata; el paquete esta deprecated y conviene planificar salida o reemplazo.' : candidate.diffType === 'major' ? 'Evidencia parcial basada en semver y metadata; trata el cambio como potencialmente breaking hasta revisar fuentes oficiales.' : candidate.diffType === 'minor' ? 'Evidencia parcial basada en metadata; upgrade incremental con riesgo acotado si la cobertura actual es razonable.' : 'Evidencia parcial basada en metadata; patch orientado a fixes y estabilidad.';\n  return `Upgrade ${candidate.currentVersion} -> ${candidate.latestVersion}. ${tone}${publishedAt ? ` Latest published ${publishedAt}.` : ''}`;\n};\nconst buildSources = (candidate) => {\n  const sources = [{ packageName: candidate.name, label: 'npm', url: `https://www.npmjs.com/package/${candidate.name}` }];\n  if (candidate.repositoryUrl) sources.push({ packageName: candidate.name, label: 'repository', url: candidate.repositoryUrl });\n  return sources;\n};\nconst shallowBriefs = shallowCandidates.map((candidate) => ({\n  name: candidate.name,\n  summary: summarize(candidate),\n  breakingChanges: [],\n  testFocus: candidate.deprecated ? ['Validar rutas donde aun dependa el paquete deprecated', 'Buscar reemplazo funcional antes del siguiente release'] : ['Smoke test del flujo principal afectado', 'Validar build, imports y arranque del proyecto'],\n  riskLevel: candidate.deprecated || candidate.diffType === 'major' ? 'high' : candidate.diffType === 'minor' ? 'medium' : 'low',\n  confidence: 'low',\n  evidenceStatus: 'partial',\n  recommendedActions: candidate.deprecated ? ['Congelar nuevas integraciones sobre este paquete', 'Priorizar sustitucion o remocion gradual'] : ['Aplicar upgrade en una rama corta', 'Confirmar que no cambie el build ni el runtime'],\n  sources: buildSources(candidate)\n}));\nconst allCandidates = Array.isArray(base.allCandidates) ? base.allCandidates : [];\nconst briefMap = new Map();\nfor (const brief of shallowBriefs) briefMap.set(brief.name, brief);\nfor (const brief of deepBriefs) briefMap.set(brief.name, brief);\nconst packageBriefs = allCandidates.map((candidate) => briefMap.get(candidate.name)).filter(Boolean);\nconst sources = [];\nconst seen = new Set();\nfor (const brief of packageBriefs) {\n  for (const source of brief.sources ?? []) {\n    const key = `${source.packageName}|${source.label}|${source.url}`;\n    if (!seen.has(key)) {\n      seen.add(key);\n      sources.push(source);\n    }\n  }\n}\nconst evidenceCoverage = { verified: 0, partial: 0, none: 0 };\nfor (const brief of packageBriefs) {\n  const key = ['verified', 'partial', 'none'].includes(brief.evidenceStatus) ? brief.evidenceStatus : 'none';\n  evidenceCoverage[key] += 1;\n}\nconst verifiedPackages = packageBriefs.filter((brief) => brief.evidenceStatus === 'verified').map((brief) => brief.name);\nconst partialPackages = packageBriefs.filter((brief) => brief.evidenceStatus === 'partial').map((brief) => brief.name);\nconst nonePackages = packageBriefs.filter((brief) => brief.evidenceStatus === 'none').map((brief) => brief.name);\nreturn [{ json: { analysisId: base.analysisId, projectName: base.projectName, dependencyStats: base.dependencyStats, allCandidates, quickWins: base.quickWins ?? [], highRisk: base.highRisk ?? [], packageBriefs, sources, evidenceCoverage, verifiedPackages, partialPackages, nonePackages } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4128,
+        800
+      ],
+      "id": "4618966e-4a77-4689-8ddb-bf235a56ce49",
+      "name": "Merge package briefs"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst parsed = raw.output ?? raw.response ?? raw;\n\nconst base = $('Merge package briefs').first().json;\nconst coverage = base.evidenceCoverage ?? { verified: 0, partial: 0, none: 0 };\n\nconst fallbackPlan = [\n  {\n    wave: 1,\n    title: 'Fase 1 - Quick wins controlados',\n    rationale: 'Aplicar upgrades con menor riesgo y evidencia suficiente para mover rapido sin romper la base del proyecto.',\n    packages: (base.quickWins ?? []).map((pkg) => pkg.name).filter(Boolean)\n  },\n  {\n    wave: 2,\n    title: 'Fase 2 - Riesgo alto y deprecated',\n    rationale: 'Resolver majors, paquetes deprecated y cambios con mayor necesidad de validacion antes de mergear.',\n    packages: (base.highRisk ?? []).map((pkg) => pkg.name).filter(Boolean)\n  }\n];\n\nconst fallbackSummary = `Se completo la investigacion por paquete para ${base.projectName}. Cobertura actual: ${coverage.verified} paquetes con evidencia verified, ${coverage.partial} con evidencia partial y ${coverage.none} sin evidencia suficiente. Si la sintesis automatica no puede verificarse, usa los packageBriefs como fuente principal para decidir el plan de upgrade.`;\n\nconst fallbackSlackDigest = `Investigacion completada para ${base.projectName}: ${coverage.verified} verified, ${coverage.partial} partial, ${coverage.none} none. Prioriza high risk y deprecated antes de mergear.`;\n\nconst resolved =\n  parsed && typeof parsed === 'object' && !Array.isArray(parsed)\n    ? parsed\n    : {\n        analysisId: base.analysisId,\n        status: 'completed',\n        executiveSummaryMd: fallbackSummary,\n        upgradePlan: fallbackPlan,\n        slackDigestMd: fallbackSlackDigest,\n        sources: base.sources ?? []\n      };\n\nconst allowedSources = new Map();\nfor (const source of base.sources ?? []) {\n  const packageName = String(source?.packageName ?? '');\n  const label = String(source?.label ?? '');\n  const url = String(source?.url ?? '');\n  if (!packageName || !label || !url) continue;\n  if (!allowedSources.has(url)) {\n    allowedSources.set(url, { packageName, label, url });\n  }\n}\n\nconst dedupedSources = [];\nconst seen = new Set();\n\nfor (const source of [...(resolved.sources ?? []), ...(base.sources ?? [])]) {\n  const url = String(source?.url ?? '');\n  const canonical = allowedSources.get(url);\n  if (!canonical) continue;\n\n  const key = `${canonical.packageName}|${canonical.label}|${canonical.url}`;\n  if (seen.has(key)) continue;\n\n  seen.add(key);\n  dedupedSources.push(canonical);\n}\n\nreturn [\n  {\n    json: {\n      analysisId: resolved.analysisId || base.analysisId,\n      status: 'completed',\n      executiveSummaryMd: resolved.executiveSummaryMd ?? fallbackSummary,\n      upgradePlan: Array.isArray(resolved.upgradePlan) ? resolved.upgradePlan : fallbackPlan,\n      packageBriefs: base.packageBriefs ?? [],\n      slackDigestMd: resolved.slackDigestMd ?? fallbackSlackDigest,\n      sources: dedupedSources\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3456,
+        784
+      ],
+      "id": "0557b730-7402-494d-9bf8-de9809fc7343",
+      "name": "Build completed callback"
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $input.first().json;\nconst fallback = $('Validate input').first().json;\nconst base = $('Merge package briefs').first()?.json ?? null;\n\nconst message =\n  source.error?.message ??\n  source.message ??\n  source.statusMessage ??\n  'No se pudo generar el brief final en n8n. Revisa Groq o el parser y vuelve a intentar.';\n\nif (base?.packageBriefs?.length) {\n  const coverage = base.evidenceCoverage ?? { verified: 0, partial: 0, none: 0 };\n\n  return [\n    {\n      json: {\n        analysisId: base.analysisId ?? fallback.analysisId,\n        status: 'completed',\n        executiveSummaryMd: `Se completo la investigacion por paquete, pero fallo la sintesis ejecutiva automatizada. ${message}`,\n        upgradePlan: [\n          {\n            wave: 1,\n            title: 'Fase 1 - Quick wins controlados',\n            rationale: 'Mover quick wins con validacion basica mientras se revisan cambios sensibles.',\n            packages: (base.quickWins ?? []).map((pkg) => pkg.name).filter(Boolean)\n          },\n          {\n            wave: 2,\n            title: 'Fase 2 - Riesgo alto y deprecated',\n            rationale: 'Resolver majors, deprecated y paquetes con evidencia que requiere revision adicional.',\n            packages: (base.highRisk ?? []).map((pkg) => pkg.name).filter(Boolean)\n          }\n        ],\n        packageBriefs: base.packageBriefs,\n        slackDigestMd: `Sintesis ejecutiva degradada: ${coverage.verified} verified, ${coverage.partial} partial, ${coverage.none} none. Usa packageBriefs y fuentes antes de mergear.`,\n        sources: base.sources ?? []\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      analysisId: fallback.analysisId,\n      status: 'failed',\n      executiveSummaryMd: message,\n      upgradePlan: [],\n      packageBriefs: [],\n      sources: []\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3456,
+        976
+      ],
+      "id": "b7fff81b-05e1-4c6b-86c8-05bfc4b35d9f",
+      "name": "Build failed callback"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_CALLBACK_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-signature",
+              "value": "={{ $env.APP_CALLBACK_SECRET }}"
+            },
+            {
+              "name": "x-idempotency-key",
+              "value": "={{ $json.analysisId }}-{{$execution.id}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -3200,
+        864
+      ],
+      "id": "5f76238a-c608-4c78-b177-5f5f5a46909d",
+      "name": "HTTP Request: callback app",
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Genera el brief final del proyecto a partir de la investigación consolidada.\n\nObjetivos:\n- executiveSummaryMd: resumir el estado general del upgrade, la cobertura de evidencia, los focos de riesgo y la estrategia recomendada.\n- upgradePlan: secuenciar el trabajo en fases ejecutables para developers.\n- slackDigestMd: producir un digest corto, accionable y compartible.\n- sources: reutilizar solo fuentes de la entrada.\n\nCómo sintetizar:\n- analysisId debe coincidir exactamente con el analysisId de entrada.\n- status debe ser siempre \"completed\".\n- Usa packageBriefs como base factual y no vuelvas a investigar.\n- Da más peso a packageBriefs con evidenceStatus verified.\n- Usa partialPackages y nonePackages para calibrar el nivel de cautela.\n- Si existe mezcla de upgrades simples y cambios potencialmente disruptivos, separa la ejecución por fases.\n- Diferencia con claridad quick wins frente a high risk.\n- Si la cobertura verificada es limitada, dilo explícitamente y propone validación adicional antes de merges amplios.\n\nQué no hacer:\n- No inventes paquetes o fuentes.\n- No conviertas incertidumbre en afirmaciones tajantes.\n- No repitas cada packageBrief casi textual; sintetiza y prioriza.\n- No uses el texto visible \"wave\"; usa \"Fase\" en títulos y narrativa.\n\nEntrada:\n{{ JSON.stringify({\n  analysisId: $json.analysisId,\n  projectName: $json.projectName,\n  dependencyStats: $json.dependencyStats,\n  quickWins: $json.quickWins,\n  highRisk: $json.highRisk,\n  evidenceCoverage: $json.evidenceCoverage,\n  verifiedPackages: $json.verifiedPackages,\n  partialPackages: $json.partialPackages,\n  nonePackages: $json.nonePackages,\n  packageBriefs: $json.packageBriefs,\n  sources: $json.sources\n}, null, 2) }}\n",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Eres un analista senior de upgrades para dependencias npm.\n\nDevuelve exclusivamente datos que cumplan el schema del output parser.\nTodo el texto orientado al usuario debe estar principalmente en español técnico natural, permitiendo anglicismos comunes entre programadores cuando mejoren la claridad.\n\nCampos que deben salir en español:\n- executiveSummaryMd\n- upgradePlan.title\n- upgradePlan.rationale\n- slackDigestMd\n\nCampos fijos:\n- analysisId debe coincidir exactamente con el analysisId de entrada.\n- status debe ser siempre \"completed\".\n\nTerminología:\n- Usa \"Fase 1\", \"Fase 2\", etc. en el texto visible.\n- El campo JSON técnico sigue llamándose wave y debe ser un entero correlativo.\n- No uses \"wave\", \"waves\", \"onda\" u \"olas\" dentro del texto final.\n- Puedes mantener anglicismos comunes como upgrade, deprecated, breaking changes, quick wins y heavy lifts cuando mejoren la claridad.\n- No traduzcas nombres de paquetes, versiones, identificadores de código, URLs, nombres de archivos ni texto técnico dentro de backticks.\n\nRol:\n- Actúa como sintetizador y priorizador del proyecto, no como re-investigador por paquete.\n- Usa packageBriefs como base factual.\n- No reescribas ni alteres el contenido factual de packageBriefs.\n\nReglas de precisión:\n- No inventes paquetes, fuentes, breaking changes, riesgos ni URLs.\n- Los claims fuertes solo pueden apoyarse en packageBriefs con evidenceStatus verified.\n- Si la evidencia es partial o none, dilo explícitamente y evita lenguaje tajante.\n- No agregues sources fuera de la lista de sources de entrada.\n- No conviertas incertidumbre en una recomendación de merge agresiva.\n\nReglas de estilo:\n- executiveSummaryMd debe ser narrativo, técnico y útil; no una lista plana.\n- Puedes usar Markdown dentro de executiveSummaryMd y slackDigestMd.\n- Resalta en negrita números o datos especialmente relevantes si mejora la legibilidad.\n- No devuelvas HTML.\n- slackDigestMd debe ser breve, claro y listo para compartir.\n\nReglas de priorización:\n- Separa quick wins, high risk y paquetes deprecated cuando sea relevante.\n- Prioriza paquetes deprecated, cambios major y dependencias con mayor riskScore.\n- Usa evidenceCoverage, verifiedPackages, partialPackages y nonePackages para calibrar la confianza del plan.\n- Si la cobertura verified es baja, recomiéndalo explícitamente antes de merges amplios.\n- Si hay paquetes con evidenceStatus none, trátalos como validación obligatoria antes de tocar áreas críticas.\n\nReglas para upgradePlan:\n- Debe tener entre 2 y 4 fases realistas.\n- Cada fase debe tener un objetivo claro y un rationale accionable.\n- Agrupa paquetes de forma coherente, no arbitraria.\n- Evita duplicar el mismo paquete en varias fases salvo necesidad clara.\n- La secuencia debe sentirse ejecutable por un equipo técnico real.\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -3904,
+        800
+      ],
+      "id": "eb7fd181-6dd5-4ef2-82fe-97aeeb943f01",
+      "name": "Basic LLM Chain",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {
+          "maxTokensToSample": 3000,
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -3920,
+        992
+      ],
+      "id": "d762b61a-8dbb-4168-b67b-9ce1ddd1ec6c",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "Z1d7AmcF6EvlW8cq",
+          "name": "Groq API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"analysisId\": {\n      \"type\": \"string\"\n    },\n    \"status\": {\n      \"type\": \"string\",\n      \"enum\": [\"completed\"]\n    },\n    \"executiveSummaryMd\": {\n      \"type\": \"string\"\n    },\n    \"upgradePlan\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"properties\": {\n          \"wave\": {\n            \"type\": \"integer\"\n          },\n          \"title\": {\n            \"type\": \"string\"\n          },\n          \"rationale\": {\n            \"type\": \"string\"\n          },\n          \"packages\": {\n            \"type\": \"array\",\n            \"items\": {\n              \"type\": \"string\"\n            }\n          }\n        },\n        \"required\": [\"wave\", \"title\", \"rationale\", \"packages\"]\n      }\n    },\n    \"slackDigestMd\": {\n      \"type\": \"string\"\n    },\n    \"sources\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"properties\": {\n          \"packageName\": {\n            \"type\": \"string\"\n          },\n          \"label\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"npm\",\n              \"github-release\",\n              \"changelog\",\n              \"migration-guide\",\n              \"docs\",\n              \"fallback-search\",\n              \"repository\"\n            ]\n          },\n          \"url\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\"packageName\", \"label\", \"url\"]\n      }\n    }\n  },\n  \"required\": [\n    \"analysisId\",\n    \"status\",\n    \"executiveSummaryMd\",\n    \"upgradePlan\",\n    \"slackDigestMd\",\n    \"sources\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -3728,
+        992
+      ],
+      "id": "5687528b-db9c-4717-8a10-8d2e4089ab69",
+      "name": "Structured Output Parser"
+    }
+  ],
+  "connections": {
+    "dependency-analysis": {
+      "main": [
+        [
+          {
+            "node": "Validate input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate input": {
+      "main": [
+        [
+          {
+            "node": "Normalize candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize candidates": {
+      "main": [
+        [
+          {
+            "node": "Tier packages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tier packages": {
+      "main": [
+        [
+          {
+            "node": "IF deep candidates?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF deep candidates?": {
+      "main": [
+        [
+          {
+            "node": "Prepare deep research items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge package briefs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare deep research items": {
+      "main": [
+        [
+          {
+            "node": "Call 'package-research'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'package-research'": {
+      "main": [
+        [
+          {
+            "node": "Merge package briefs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge package briefs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge package briefs": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build completed callback": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request: callback app",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build failed callback": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request: callback app",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Build completed callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build failed callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e490f8befecaf7a9f4d99d1603a8853f049a2db15b61a8bb1289ed6e3e60c4ff"
+  }
+}

@@ -4,16 +4,20 @@ import { env } from '$env/dynamic/private';
 
 import type {
 	AnalysisSnapshot,
+	ConfidenceLevel,
 	DependencyCandidate,
 	DependencyStats,
+	EvidenceStatus,
 	N8nAnalysisCallback,
 	N8nAnalysisRequest,
 	PackageBrief,
 	ParsedPackageManifest,
 	ProjectSnapshot,
 	RadarSubscriptionRecord,
+	RiskLevel,
 	SlackFrequency,
 	SourceLink,
+	SourceLabel,
 	UpgradePhase
 } from '$lib/server/analysis/types';
 import { enrichManifestDependencies } from '$lib/server/npm/client';
@@ -314,7 +318,8 @@ function stripDependencyForN8n(dependency: AnalysisSnapshot['dependencies'][numb
 		deprecated: dependency.deprecated,
 		publishedAt: dependency.publishedAt,
 		repositoryUrl: dependency.repositoryUrl,
-		riskScore: dependency.riskScore
+		riskScore: dependency.riskScore,
+		sourceUrls: dependency.sourceUrls
 	};
 }
 
@@ -465,7 +470,15 @@ function asPackageBriefArray(value: unknown): PackageBrief[] {
 				brief.breakingChanges,
 				`packageBriefs[${index}].breakingChanges`
 			),
-			testFocus: asStringArray(brief.testFocus, `packageBriefs[${index}].testFocus`)
+			testFocus: asStringArray(brief.testFocus, `packageBriefs[${index}].testFocus`),
+			riskLevel: asRiskLevel(brief.riskLevel),
+			confidence: asConfidenceLevel(brief.confidence),
+			evidenceStatus: asEvidenceStatus(brief.evidenceStatus),
+			recommendedActions: asStringArray(
+				brief.recommendedActions,
+				`packageBriefs[${index}].recommendedActions`
+			),
+			sources: asSourceArray(brief.sources)
 		};
 	});
 }
@@ -484,10 +497,68 @@ function asSourceArray(value: unknown): SourceLink[] {
 
 		return {
 			packageName: asString(source.packageName, `sources[${index}].packageName`),
-			label: asString(source.label, `sources[${index}].label`),
+			label: asSourceLabel(source.label, `sources[${index}].label`),
 			url: asString(source.url, `sources[${index}].url`)
 		};
 	});
+}
+
+function asRiskLevel(value: unknown): RiskLevel {
+	if (value == null) {
+		return 'medium';
+	}
+
+	if (value === 'low' || value === 'medium' || value === 'high') {
+		return value;
+	}
+
+	throw new Error('El campo packageBriefs[].riskLevel debe ser low, medium o high.');
+}
+
+function asConfidenceLevel(value: unknown): ConfidenceLevel {
+	if (value == null) {
+		return 'low';
+	}
+
+	if (value === 'low' || value === 'medium' || value === 'high') {
+		return value;
+	}
+
+	throw new Error('El campo packageBriefs[].confidence debe ser low, medium o high.');
+}
+
+function asEvidenceStatus(value: unknown): EvidenceStatus {
+	if (value == null) {
+		return 'none';
+	}
+
+	if (value === 'verified' || value === 'partial' || value === 'none') {
+		return value;
+	}
+
+	throw new Error('El campo packageBriefs[].evidenceStatus debe ser verified, partial o none.');
+}
+
+function asSourceLabel(value: unknown, fieldName: string): SourceLabel {
+	if (value === 'repo') {
+		return 'repository';
+	}
+
+	if (
+		value === 'npm' ||
+		value === 'github-release' ||
+		value === 'changelog' ||
+		value === 'migration-guide' ||
+		value === 'docs' ||
+		value === 'fallback-search' ||
+		value === 'repository'
+	) {
+		return value;
+	}
+
+	throw new Error(
+		`El campo ${fieldName} debe ser uno de: npm, github-release, changelog, migration-guide, docs, fallback-search, repository.`
+	);
 }
 
 function asNumber(value: unknown, fieldName: string): number {

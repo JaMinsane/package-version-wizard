@@ -12,6 +12,21 @@ export type AnalysisStatus = 'queued' | 'enriching' | 'summarizing' | 'completed
 
 export type DependencyDecision = 'upgrade_now' | 'upgrade_later' | 'replace' | 'hold';
 
+export type SourceLabel =
+	| 'npm'
+	| 'github-release'
+	| 'changelog'
+	| 'migration-guide'
+	| 'docs'
+	| 'fallback-search'
+	| 'repository';
+
+export type RiskLevel = 'low' | 'medium' | 'high';
+
+export type ConfidenceLevel = 'low' | 'medium' | 'high';
+
+export type EvidenceStatus = 'verified' | 'partial' | 'none';
+
 export type SlackFrequency = 'daily' | 'weekdays' | 'twice_daily';
 
 export interface DependencyStats {
@@ -33,11 +48,11 @@ export interface DependencyCandidate {
 	publishedAt?: string;
 	repositoryUrl?: string;
 	riskScore: number;
+	sourceUrls: string[];
 }
 
 export interface DependencySnapshot extends DependencyCandidate {
 	decision: DependencyDecision;
-	sourceUrls: string[];
 }
 
 export interface N8nAnalysisRequest {
@@ -64,11 +79,16 @@ export interface PackageBrief {
 	summary: string;
 	breakingChanges: string[];
 	testFocus: string[];
+	riskLevel: RiskLevel;
+	confidence: ConfidenceLevel;
+	evidenceStatus: EvidenceStatus;
+	recommendedActions: string[];
+	sources: SourceLink[];
 }
 
 export interface SourceLink {
 	packageName: string;
-	label: string;
+	label: SourceLabel;
 	url: string;
 }
 

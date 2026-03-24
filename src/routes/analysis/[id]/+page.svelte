@@ -2,6 +2,13 @@
 	import { browser } from '$app/environment';
 
 	import type { ActionData, PageData } from './$types';
+	import type {
+		ConfidenceLevel,
+		EvidenceStatus,
+		PackageBrief,
+		RiskLevel,
+		SourceLabel
+	} from '$lib/server/analysis/types';
 
 	let {
 		data: initialData,
@@ -158,6 +165,60 @@
 			patch: 'bg-emerald-100 text-emerald-900',
 			unknown: 'bg-slate-100 text-slate-700'
 		}[diffType];
+	}
+
+	function getRiskLevelTone(riskLevel?: RiskLevel) {
+		return {
+			high: 'bg-rose-100 text-rose-900',
+			medium: 'bg-amber-100 text-amber-900',
+			low: 'bg-emerald-100 text-emerald-900'
+		}[riskLevel ?? 'medium'];
+	}
+
+	function getConfidenceTone(confidence?: ConfidenceLevel) {
+		return {
+			high: 'bg-emerald-100 text-emerald-900',
+			medium: 'bg-cyan-100 text-cyan-900',
+			low: 'bg-slate-100 text-slate-700'
+		}[confidence ?? 'low'];
+	}
+
+	function getEvidenceTone(evidenceStatus?: EvidenceStatus) {
+		return {
+			verified: 'bg-emerald-100 text-emerald-900',
+			partial: 'bg-amber-100 text-amber-900',
+			none: 'bg-slate-100 text-slate-700'
+		}[evidenceStatus ?? 'none'];
+	}
+
+	function formatSourceLabel(label: SourceLabel | string) {
+		return (
+			{
+				npm: 'npm',
+				'github-release': 'release',
+				changelog: 'changelog',
+				'migration-guide': 'migration guide',
+				docs: 'docs',
+				'fallback-search': 'fallback search',
+				repository: 'repo',
+				repo: 'repo'
+			} as const
+		)[label as SourceLabel | 'repo'] ?? label;
+	}
+
+	function getEvidenceMessage(brief: Partial<PackageBrief>) {
+		const evidenceStatus = brief.evidenceStatus ?? 'none';
+		const confidence = brief.confidence ?? 'low';
+
+		if (evidenceStatus === 'verified') {
+			return `Brief respaldado por fuentes verificadas. Confidence ${confidence}.`;
+		}
+
+		if (evidenceStatus === 'partial') {
+			return `La investigación encontró evidencia parcial. Revisa las fuentes antes de ejecutar cambios sensibles.`;
+		}
+
+		return 'No hubo evidencia suficiente para afirmar breaking changes verificables.';
 	}
 </script>
 
@@ -516,32 +577,86 @@
 						<div class="mt-6 grid gap-4 xl:grid-cols-2">
 							{#each activeAnalysis.callbackPayload.packageBriefs as brief}
 								<article class="rounded-3xl border border-slate-200 bg-white p-5">
-									<h3 class="text-lg font-semibold text-slate-950">{brief.name}</h3>
+									<div class="flex items-start justify-between gap-3">
+										<h3 class="text-lg font-semibold text-slate-950">{brief.name}</h3>
+										<div class="flex flex-wrap justify-end gap-2">
+											<span class={`rounded-full px-3 py-1 text-xs font-semibold ${getRiskLevelTone(brief.riskLevel)}`}>
+												{brief.riskLevel ?? 'medium'} risk
+											</span>
+											<span class={`rounded-full px-3 py-1 text-xs font-semibold ${getConfidenceTone(brief.confidence)}`}>
+												confidence {brief.confidence ?? 'low'}
+											</span>
+											<span class={`rounded-full px-3 py-1 text-xs font-semibold ${getEvidenceTone(brief.evidenceStatus)}`}>
+												{brief.evidenceStatus ?? 'none'}
+											</span>
+										</div>
+									</div>
 									<p class="mt-3 text-sm leading-6 text-slate-600">{brief.summary}</p>
 
-									{#if brief.breakingChanges.length}
+									<div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+										{getEvidenceMessage(brief)}
+									</div>
+
+									{#if (brief.breakingChanges ?? []).length}
 										<div class="mt-5">
 											<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
 												Breaking changes
 											</p>
 											<ul class="mt-2 space-y-2 text-sm text-slate-700">
-												{#each brief.breakingChanges as change}
+												{#each brief.breakingChanges ?? [] as change}
 													<li class="rounded-2xl bg-rose-50 px-3 py-2">{change}</li>
 												{/each}
 											</ul>
 										</div>
 									{/if}
 
-									{#if brief.testFocus.length}
+									{#if (brief.recommendedActions ?? []).length}
+										<div class="mt-5">
+											<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+												Recommended actions
+											</p>
+											<ul class="mt-2 space-y-2 text-sm text-slate-700">
+												{#each brief.recommendedActions ?? [] as action}
+													<li class="rounded-2xl bg-slate-100 px-3 py-2">{action}</li>
+												{/each}
+											</ul>
+										</div>
+									{/if}
+
+									{#if (brief.testFocus ?? []).length}
 										<div class="mt-5">
 											<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
 												Test focus
 											</p>
 											<div class="mt-2 flex flex-wrap gap-2">
-												{#each brief.testFocus as focus}
+												{#each brief.testFocus ?? [] as focus}
 													<span class="rounded-full bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-900">
 														{focus}
 													</span>
+												{/each}
+											</div>
+										</div>
+									{/if}
+
+									{#if (brief.sources ?? []).length}
+										<div class="mt-5">
+											<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+												Evidence
+											</p>
+											<div class="mt-2 grid gap-2">
+												{#each brief.sources ?? [] as source}
+													<a
+														class="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-white"
+														href={source.url}
+														target="_blank"
+														rel="noreferrer"
+													>
+														<span class="flex items-center gap-2">
+															<span class="font-medium text-slate-900">{formatSourceLabel(source.label)}</span>
+															<span class="text-xs text-slate-500">{source.packageName}</span>
+														</span>
+														<span class="font-mono text-xs text-slate-500">open</span>
+													</a>
 												{/each}
 											</div>
 										</div>
@@ -567,7 +682,7 @@
 								>
 									<span>
 										<span class="font-semibold text-slate-900">{source.packageName}</span>
-										<span class="ml-2 text-slate-500">{source.label}</span>
+										<span class="ml-2 text-slate-500">{formatSourceLabel(source.label)}</span>
 									</span>
 									<span class="font-mono text-xs text-slate-500">open</span>
 								</a>

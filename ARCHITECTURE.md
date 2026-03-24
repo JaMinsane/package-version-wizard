@@ -59,9 +59,9 @@ Browser
   -> Browser hace polling corto al estado del analysis
 
 n8n
-  -> enriquece dependencias
-  -> ejecuta clasificación/ranking AI
-  -> genera upgrade plan + brief + digest de Slack
+  -> orquesta tiers de investigación y síntesis final
+  -> ejecuta `package-research` para paquetes top-risk
+  -> genera upgrade plan + brief + digest de Slack con fuentes trazables
   -> callback firmado a SvelteKit
 
 SvelteKit
@@ -197,6 +197,7 @@ interface DependencyCandidate {
   publishedAt?: string;
   repositoryUrl?: string;
   riskScore: number;
+  sourceUrls: string[];
 }
 
 interface N8nAnalysisRequest {
@@ -211,9 +212,41 @@ interface N8nAnalysisCallback {
   status: 'completed' | 'failed';
   executiveSummaryMd: string;
   upgradePlan: { wave: number; title: string; rationale: string; packages: string[] }[];
-  packageBriefs: { name: string; summary: string; breakingChanges: string[]; testFocus: string[] }[];
+  packageBriefs: {
+    name: string;
+    summary: string;
+    breakingChanges: string[];
+    testFocus: string[];
+    riskLevel: 'low' | 'medium' | 'high';
+    confidence: 'low' | 'medium' | 'high';
+    evidenceStatus: 'verified' | 'partial' | 'none';
+    recommendedActions: string[];
+    sources: {
+      packageName: string;
+      label:
+        | 'npm'
+        | 'github-release'
+        | 'changelog'
+        | 'migration-guide'
+        | 'docs'
+        | 'fallback-search'
+        | 'repository';
+      url: string;
+    }[];
+  }[];
   slackDigestMd?: string;
-  sources: { packageName: string; label: string; url: string }[];
+  sources: {
+    packageName: string;
+    label:
+      | 'npm'
+      | 'github-release'
+      | 'changelog'
+      | 'migration-guide'
+      | 'docs'
+      | 'fallback-search'
+      | 'repository';
+    url: string;
+  }[];
 }
 ```
 
@@ -249,10 +282,33 @@ interface AnalysisResult {
     summary: string;
     breakingChanges: string[];
     testFocus: string[];
+    riskLevel: 'low' | 'medium' | 'high';
+    confidence: 'low' | 'medium' | 'high';
+    evidenceStatus: 'verified' | 'partial' | 'none';
+    recommendedActions: string[];
+    sources: {
+      packageName: string;
+      label:
+        | 'npm'
+        | 'github-release'
+        | 'changelog'
+        | 'migration-guide'
+        | 'docs'
+        | 'fallback-search'
+        | 'repository';
+      url: string;
+    }[];
   }[];
   sources?: {
     packageName: string;
-    label: string;
+    label:
+      | 'npm'
+      | 'github-release'
+      | 'changelog'
+      | 'migration-guide'
+      | 'docs'
+      | 'fallback-search'
+      | 'repository';
     url: string;
   }[];
 }
@@ -524,7 +580,7 @@ No queremos una lista plana de paquetes. Queremos un plan de ejecución realista
 
 ### Objetivo
 
-Transformar el análisis técnico base en un brief AI utilizable por developers y stakeholders.
+Orquestar una investigación verificable por paquete y devolver un brief AI útil para developers, no solo un resumen genérico de metadata.
 
 ### Trigger
 
@@ -538,35 +594,48 @@ Payload con:
 - `projectName`
 - stats agregadas
 - candidatos normalizados con riesgo preliminar
+- `sourceUrls` por dependencia cuando existan
 
 ### Pasos propuestos en n8n
 
 1. `Webhook Trigger`
    - recibe el payload base
-2. `HTTP Request: npm metadata enrichment`
-   - opcionalmente refresca o complementa fuentes para paquetes top-risk
-3. `Code Node: prioritize packages`
-   - selecciona subconjuntos clave y organiza data para prompts
-4. `HTTP Request / scraping ligero a fuentes públicas`
-   - changelog, releases o repo para paquetes críticos
-5. `LLM Node: package intelligence`
-   - resume breaking changes probables
-   - identifica foco de testing
-   - propone decisión por paquete
-6. `LLM Node: executive summary`
-   - genera resumen ejecutivo en lenguaje claro
-   - construye waves del upgrade plan
-7. `Code Node: shape callback payload`
-   - transforma todo al contrato `N8nAnalysisCallback`
-8. `HTTP Request: callback a SvelteKit`
+2. `Code Node: validate input`
+   - valida shape mínimo y normaliza tipos
+3. `Code Node: normalize candidates`
+   - normaliza URLs, `sourceUrls`, fechas y `riskScore`
+4. `Code Node: tier packages`
+   - incluye siempre `major`
+   - incluye siempre `deprecated`
+   - completa hasta `top 8` por `riskScore`
+5. `Code Node: build shallow briefs`
+   - genera briefs deterministas para el resto de dependencias
+6. `Split In Batches`
+   - procesa `deepCandidates` con concurrencia `3`
+7. `Execute Workflow: package-research`
+   - llama el subworkflow de investigación profunda por paquete
+8. `Code Node: merge package briefs`
+   - une `deep` + `shallow`
+   - deduplica `sources`
+9. `Code Node: prepare executive synthesis`
+   - construye el request estructurado al modelo
+10. `HTTP Request: Groq executive synthesis`
+   - genera `executiveSummaryMd`, `upgradePlan`, `slackDigestMd` y `sources`
+11. `Code Node: build completed callback`
+   - incorpora `packageBriefs` ya investigados
+12. `HTTP Request: callback a SvelteKit`
    - envía resultado firmado
+13. `Code Node: build failed callback`
+   - construye un payload `failed` si la síntesis final falla
 
 ### Reglas del workflow
 
 - limitar el enriquecimiento profundo a paquetes de mayor riesgo para controlar costo y latencia
+- priorizar siempre fuentes canónicas antes de abrir fallback web
 - no devolver HTML
 - devolver solo Markdown estructurado y arrays tipados
 - incluir fuentes trazables por paquete cuando existan
+- degradar a `partial` o `none` cuando falte evidencia en lugar de inventar breaking changes
 
 ### Output esperado
 
@@ -575,6 +644,51 @@ Payload con:
 - `packageBriefs`
 - `slackDigestMd`
 - `sources`
+
+## Workflow 1A: `package-research`
+
+### Objetivo
+
+Investigar un paquete crítico con evidencia verificable y devolver un `PackageBrief` con confidence y trazabilidad.
+
+### Trigger
+
+- `Execute Workflow Trigger` llamado por `dependency-analysis`
+
+### Flujo
+
+1. `Execute Workflow Trigger`
+2. `Code Node: normalize package context`
+   - detecta `repoUrl`, `github.owner`, `github.repo`, `npmUrl`
+3. `HTTP Request: npm registry metadata`
+   - refresca metadata y deprecation real
+4. `IF node: GitHub repo?`
+   - evita fetches innecesarios cuando no hay repo GitHub detectable
+5. `HTTP Request: GitHub repo metadata`
+6. `HTTP Request: GitHub releases`
+7. `HTTP Request: GitHub contents/raw`
+   - busca `CHANGELOG`, `MIGRATION`, `UPGRADE`, `README`
+8. `Code Node: extract evidence window`
+   - construye evidencia canónica útil para el rango `currentVersion -> latestVersion`
+9. `IF node: canonical evidence enough?`
+10. `HTTP Request: Tavily Search`
+11. `HTTP Request: Tavily Extract`
+   - fallback controlado solo si la evidencia canónica no basta
+12. `Code Node: score and dedupe evidence`
+   - normaliza labels y confidence
+13. `Code Node: prepare package brief prompt`
+14. `HTTP Request: Groq package brief`
+   - genera el `PackageBrief` estructurado con JSON schema
+15. `Code Node: build package brief`
+   - aplica fallback seguro si el modelo no devuelve JSON usable
+16. `Code Node: return data to parent`
+
+### Output esperado del subworkflow
+
+- `packageBrief`
+- `packageBrief.sources`
+- `confidence`
+- `evidenceStatus`
 
 ## Workflow 2: `dependency-radar`
 
@@ -666,11 +780,15 @@ No es necesario implementarla completa en el primer commit, pero esta será la f
 
 ## Variables de entorno
 
+### App SvelteKit
+
 Variables mínimas esperadas:
 
 - `DATABASE_URL`
 - `N8N_ANALYSIS_WEBHOOK_URL`
+- `N8N_ANALYSIS_WEBHOOK_TOKEN`
 - `N8N_CALLBACK_SECRET`
+- `N8N_INTERNAL_API_TOKEN`
 - `PUBLIC_APP_URL`
 - `SLACK_WEBHOOK_URL` si alguna automatización también se dispara desde backend
 
@@ -678,6 +796,21 @@ Uso:
 
 - secretos con `$env/static/private` o `$env/dynamic/private`
 - URLs públicas con `$env/static/public` o `$env/dynamic/public` solo si realmente deben llegar al cliente
+
+### Secrets y variables en n8n
+
+Los workflows exportados esperan estos valores del lado de `n8n`:
+
+- `APP_CALLBACK_URL`
+- `APP_CALLBACK_SECRET`
+- `GROQ_API_KEY`
+- `GITHUB_TOKEN`
+- `TAVILY_API_KEY`
+
+Además:
+
+- el trigger `dependency-analysis` usa `headerAuth` para recibir solo requests firmados desde la app
+- el callback a SvelteKit ya no debe tener URL ni secreto hardcodeados en el export
 
 ## Deployment en VPS / Dokploy
 
@@ -713,7 +846,7 @@ El MVP debe incluir exactamente estas capacidades:
 - vista compartible por `analysisId`
 - resumen AI saneado y visible
 - upgrade plan por waves
-- cards por paquete con foco de testing
+- cards por paquete con foco de testing, evidence status y fuentes
 
 ## Roadmap premium
 
@@ -749,6 +882,8 @@ Estas capacidades deben quedar definidas como siguiente fase, no como requisito 
 - si `n8n` falla, el análisis termina en `failed` con mensaje visible
 - si el callback llega dos veces, el resultado no se duplica
 - si el usuario recarga la página durante el proceso, el estado puede recuperarse
+- si GitHub o Tavily fallan, el brief puede degradar a `partial` o `none` sin bloquear toda la corrida
+- si falta evidencia canónica, el sistema debe seguir generando guidance útil sin inventar hechos verificables
 
 ### Calidad del resultado
 
@@ -756,6 +891,9 @@ Estas capacidades deben quedar definidas como siguiente fase, no como requisito 
 - el plan debe separar low-risk vs high-risk
 - los paquetes deprecated deben resaltarse explícitamente
 - cada paquete crítico debe incluir guidance de test o riesgo
+- `breakingChanges` solo deben aparecer cuando exista evidencia suficiente
+- cada `packageBrief` debe exponer `confidence`, `evidenceStatus`, `recommendedActions` y fuentes propias
+- el resultado debe dejar claro cuándo un paquete quedó en investigación `verified`, `partial` o `none`
 
 ### Automatización
 
