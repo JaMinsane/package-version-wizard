@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import { env as privateEnv } from '$env/dynamic/private';
 import { fail, redirect } from '@sveltejs/kit';
 
 import type { Actions, PageServerLoad } from './$types';
@@ -7,13 +7,17 @@ import type { SlackFrequency } from '$lib/server/analysis/types';
 import { parseUploadedPackageJson } from '$lib/server/package-json/manifest';
 
 export const load: PageServerLoad = async () => {
+	const appBaseUrl = privateEnv.APP_BASE_URL || privateEnv.PUBLIC_APP_URL;
+
 	return {
 		environmentReady: {
-			databaseConfigured: Boolean(env.DATABASE_URL),
-			webhookConfigured: Boolean(env.N8N_ANALYSIS_WEBHOOK_URL && env.N8N_ANALYSIS_WEBHOOK_TOKEN),
-			callbackConfigured: Boolean(env.N8N_CALLBACK_SECRET),
-			publicAppConfigured: Boolean(env.PUBLIC_APP_URL),
-			radarConfigured: Boolean(env.N8N_INTERNAL_API_TOKEN)
+			databaseConfigured: Boolean(privateEnv.DATABASE_URL),
+			webhookConfigured: Boolean(
+				privateEnv.N8N_ANALYSIS_WEBHOOK_URL && privateEnv.N8N_ANALYSIS_WEBHOOK_TOKEN
+			),
+			callbackConfigured: Boolean(privateEnv.N8N_CALLBACK_SECRET),
+			publicAppConfigured: Boolean(appBaseUrl),
+			radarConfigured: Boolean(privateEnv.N8N_INTERNAL_API_TOKEN)
 		}
 	};
 };

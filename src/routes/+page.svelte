@@ -236,7 +236,7 @@
 						{ label: 'Postgres persistido', description: '`DATABASE_URL`', ready: data.environmentReady.databaseConfigured },
 						{ label: 'Webhook privado de n8n', description: '`N8N_ANALYSIS_WEBHOOK_URL` + token', ready: data.environmentReady.webhookConfigured },
 						{ label: 'Callback firmado', description: '`N8N_CALLBACK_SECRET`', ready: data.environmentReady.callbackConfigured },
-						{ label: 'Deep links públicos', description: '`PUBLIC_APP_URL`', ready: data.environmentReady.publicAppConfigured },
+						{ label: 'Deep links públicos', description: '`APP_BASE_URL`', ready: data.environmentReady.publicAppConfigured },
 						{ label: 'Radar interno para n8n', description: '`N8N_INTERNAL_API_TOKEN`', ready: data.environmentReady.radarConfigured }
 					] as item}
 						<div class="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">

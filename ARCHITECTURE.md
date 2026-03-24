@@ -789,7 +789,7 @@ Variables mínimas esperadas:
 - `N8N_ANALYSIS_WEBHOOK_TOKEN`
 - `N8N_CALLBACK_SECRET`
 - `N8N_INTERNAL_API_TOKEN`
-- `PUBLIC_APP_URL`
+- `APP_BASE_URL`
 - `SLACK_WEBHOOK_URL` si alguna automatización también se dispara desde backend
 
 Uso:

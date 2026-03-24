@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { env } from '$env/dynamic/private';
+import { env as privateEnv } from '$env/dynamic/private';
 
 import type {
 	AnalysisSnapshot,
@@ -184,7 +184,7 @@ export async function updateSlackSubscriptionForAnalysis(
 }
 
 export async function getRadarSubscriptionRecords(): Promise<RadarSubscriptionRecord[]> {
-	const baseUrl = normalizeBaseUrl(env.PUBLIC_APP_URL);
+	const baseUrl = normalizeBaseUrl(privateEnv.APP_BASE_URL || privateEnv.PUBLIC_APP_URL);
 	const records = await listRadarSubscriptions();
 
 	return records.map((record) => ({

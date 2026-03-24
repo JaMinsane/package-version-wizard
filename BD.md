@@ -118,7 +118,7 @@ Notas:
 
 - Las suscripciones activas se leen desde `automation_subscriptions`
 - El endpoint interno de radar reutiliza `manifest_json` del último análisis del proyecto
-- Los deep links a Slack se construyen con `PUBLIC_APP_URL`
+- Los deep links a Slack se construyen con `APP_BASE_URL`
 
 ## Diagramas
 
@@ -236,7 +236,7 @@ sequenceDiagram
 
 ```bash
 DATABASE_URL=
-PUBLIC_APP_URL=
+APP_BASE_URL=
 N8N_ANALYSIS_WEBHOOK_URL=
 N8N_ANALYSIS_WEBHOOK_TOKEN=
 N8N_CALLBACK_SECRET=

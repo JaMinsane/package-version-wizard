@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import { env as privateEnv } from '$env/dynamic/private';
 import { error, fail } from '@sveltejs/kit';
 
 import type { Actions, PageServerLoad } from './$types';
@@ -10,6 +10,7 @@ import type { SlackFrequency } from '$lib/server/analysis/types';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const analysis = await getAnalysisSnapshot(params.id);
+	const appBaseUrl = privateEnv.APP_BASE_URL || privateEnv.PUBLIC_APP_URL;
 
 	if (!analysis) {
 		throw error(404, 'Ese análisis no existe o ya no está disponible.');
@@ -17,8 +18,8 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	return {
 		analysis,
-		shareUrl: buildShareUrl(params.id),
-		radarReady: Boolean(env.N8N_INTERNAL_API_TOKEN && env.PUBLIC_APP_URL)
+		shareUrl: buildShareUrl(params.id, appBaseUrl),
+		radarReady: Boolean(privateEnv.N8N_INTERNAL_API_TOKEN && appBaseUrl)
 	};
 };
 
@@ -74,8 +75,7 @@ function asSlackFrequency(value: FormDataEntryValue | null): SlackFrequency {
 	return 'daily';
 }
 
-function buildShareUrl(id: string) {
-	const rawBaseUrl = env.PUBLIC_APP_URL as string | undefined;
+function buildShareUrl(id: string, rawBaseUrl: string | undefined) {
 	const baseUrl = rawBaseUrl?.trim().replace(/\/$/, '');
 
 	return baseUrl ? `${baseUrl}/analysis/${id}` : undefined;

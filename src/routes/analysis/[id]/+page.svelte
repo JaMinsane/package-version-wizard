@@ -445,7 +445,7 @@
 
 					{#if !getRadarReady()}
 						<div class="mt-4 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-							Falta configurar `PUBLIC_APP_URL` o `N8N_INTERNAL_API_TOKEN` para habilitar el radar continuo end-to-end.
+							Falta configurar `APP_BASE_URL` o `N8N_INTERNAL_API_TOKEN` para habilitar el radar continuo end-to-end.
 						</div>
 					{/if}
 				</div>
