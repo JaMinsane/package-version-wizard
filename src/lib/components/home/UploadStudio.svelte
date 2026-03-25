@@ -195,9 +195,9 @@
 						bind:value={slackFrequency}
 						class="mt-2 w-full rounded-[1.1rem] border border-white/10 bg-slate-950/45 px-4 py-3 text-sm text-white"
 					>
-						<option value="daily">Daily</option>
-						<option value="weekdays">Weekdays</option>
-						<option value="twice_daily">Twice daily</option>
+						<option value="daily">Diario</option>
+						<option value="weekdays">Lunes a viernes</option>
+						<option value="twice_daily">Dos veces al día</option>
 					</select>
 				</label>
 			</div>

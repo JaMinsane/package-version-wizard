@@ -144,9 +144,9 @@
 
 				{#if coveredBySpecDependencies.length}
 					<DependencySection
-						eyebrow="Specs alineados"
-						title="Ya cubiertas por el manifiesto"
-						description="Estas dependencias ya están cubiertas por el spec declarado o alineadas con la latest del registry. No requieren cambio inmediato en `package.json`."
+						eyebrow="Rangos alineados"
+						title="Ya resueltas por el manifiesto"
+						description="Estas dependencias ya quedan resueltas por el rango declarado o alineadas con la latest del registry. No requieren cambios inmediatos en `package.json`."
 						items={coveredBySpecDependencies}
 						emptyMessage=""
 					/>

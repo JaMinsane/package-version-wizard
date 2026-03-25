@@ -15,7 +15,7 @@
 			</p>
 		</div>
 		<span class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-300">
-			SSR-friendly · server-first · shareable
+			SSR · server-first · URL compartible
 		</span>
 	</div>
 

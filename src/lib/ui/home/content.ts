@@ -8,7 +8,7 @@ import type {
 export const homeHeroStats: HeroStat[] = [
 	{
 		value: '1 upload',
-		label: 'Manifesto listo para analizar',
+		label: 'Manifiesto listo para analizar',
 		description: 'El flujo parte de un `package.json` real y mantiene el procesamiento del lado del servidor.'
 	},
 	{
@@ -28,7 +28,7 @@ export const homeStoryCards: StoryCard[] = [
 		eyebrow: 'Señal inmediata',
 		title: 'Las dependencias dejan de ser una lista plana.',
 		description:
-			'El manifiesto se convierte en un mapa priorizado con cambios mayores, rangos cubiertos y paquetes que merecen revisión real.',
+			'El manifiesto se convierte en un mapa priorizado con cambios major, rangos que ya resuelven la latest y paquetes que merecen revisión real.',
 		accent: 'cyan'
 	},
 	{
@@ -83,7 +83,7 @@ export const homeFlowSteps: FlowStep[] = [
 		index: '02',
 		title: 'Resuelve el árbol',
 		description:
-			'El servidor consulta npm, normaliza specs y deja la corrida lista para enriquecimiento externo.',
+			'El servidor consulta npm, normaliza versiones declaradas y deja la corrida lista para enriquecimiento externo.',
 		detail: 'El webhook privado y el callback firmado mantienen el procesamiento fuera del cliente.'
 	},
 	{

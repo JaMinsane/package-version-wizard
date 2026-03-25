@@ -11,7 +11,7 @@
 					Package Version Wizard
 				</span>
 				<span class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-300">
-					npm intelligence with SvelteKit + n8n
+					Análisis npm con SvelteKit + n8n
 				</span>
 			</div>
 
@@ -22,7 +22,7 @@
 
 			<p class="mt-6 max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">
 				Una interfaz enfocada en operación: subes el manifiesto, obtienes señal priorizada del
-				registry y revisas un brief listo para coordinar upgrades con más criterio.
+				registry de npm y revisas un brief técnico para coordinar upgrades con más criterio.
 			</p>
 		</div>
 

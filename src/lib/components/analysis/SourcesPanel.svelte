@@ -11,7 +11,7 @@
 
 <section class="surface-panel rounded-[2rem] p-6 sm:p-8">
 	<p class="section-label">Fuentes</p>
-	<h2 class="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">Trazabilidad del brief</h2>
+	<h2 class="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">Trazabilidad del análisis</h2>
 
 	<div class="mt-6 grid gap-3">
 		{#each sources as source}
@@ -25,7 +25,7 @@
 					<span class="font-semibold text-white">{source.packageName}</span>
 					<span class="ml-2 text-slate-500">{formatSourceDescriptor(source)}</span>
 				</span>
-				<span class="font-mono text-xs text-slate-500">open</span>
+				<span class="font-mono text-xs text-slate-500">abrir</span>
 			</a>
 		{/each}
 	</div>

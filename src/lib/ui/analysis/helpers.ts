@@ -12,7 +12,7 @@ import type { AnalysisDependency, DependencyDisplayStatus } from '$lib/ui/analys
 
 export const analysisStatusLabels: Record<AnalysisStatus, string> = {
 	queued: 'En cola',
-	enriching: 'Resolviendo metadata',
+	enriching: 'Resolviendo metadatos',
 	summarizing: 'Generando brief',
 	completed: 'Listo para revisión',
 	failed: 'Análisis fallido'
@@ -56,8 +56,8 @@ export function getDecisionTone(decision: DependencyDecision) {
 
 export function getDecisionLabel(decision: DependencyDecision) {
 	return {
-		upgrade_now: 'actuar ahora',
-		upgrade_later: 'planificar',
+		upgrade_now: 'mover ahora',
+		upgrade_later: 'dejar en cola',
 		replace: 'reemplazar',
 		hold: 'mantener'
 	}[decision];
@@ -115,7 +115,7 @@ export function getDependencyStatusLabel(dependency: AnalysisDependency) {
 	const displayStatus = getDependencyDisplayStatus(dependency);
 
 	if (displayStatus === 'covered_by_range') {
-		return 'cubierto por rango';
+		return 'resuelto por rango';
 	}
 
 	if (displayStatus === 'up_to_date') {
@@ -130,7 +130,7 @@ export function getDependencyStatusLabel(dependency: AnalysisDependency) {
 		channel_pinned: 'canal fijado',
 		manual_review: 'revisión manual',
 		unresolved: 'revisar',
-		unsupported: 'spec custom',
+		unsupported: 'spec especial',
 		up_to_date: 'al día',
 		outdated: 'requiere cambio'
 	}[getComparisonStatus(dependency)];
@@ -148,7 +148,7 @@ export function formatDependencyVersionLine(dependency: AnalysisDependency) {
 	}
 
 	if (displayStatus === 'covered_by_range') {
-		return `Spec ${declaredSpec} · resuelve a ${wantedVersion} · latest ${latestVersion}`;
+		return `Spec ${declaredSpec} · resuelve ${wantedVersion} · latest ${latestVersion}`;
 	}
 
 	if (displayStatus === 'up_to_date') {
@@ -170,11 +170,27 @@ export function getRiskLevelTone(riskLevel?: RiskLevel) {
 	}[riskLevel ?? 'medium'];
 }
 
+export function getRiskLevelLabel(riskLevel?: RiskLevel) {
+	return {
+		high: 'riesgo alto',
+		medium: 'riesgo medio',
+		low: 'riesgo bajo'
+	}[riskLevel ?? 'medium'];
+}
+
 export function getConfidenceTone(confidence?: ConfidenceLevel) {
 	return {
 		high: 'border-emerald-400/20 bg-emerald-400/12 text-emerald-100',
 		medium: 'border-cyan-400/20 bg-cyan-400/12 text-cyan-100',
 		low: 'border-white/10 bg-white/8 text-slate-200'
+	}[confidence ?? 'low'];
+}
+
+export function getConfidenceLabel(confidence?: ConfidenceLevel) {
+	return {
+		high: 'confianza alta',
+		medium: 'confianza media',
+		low: 'confianza baja'
 	}[confidence ?? 'low'];
 }
 
@@ -186,15 +202,23 @@ export function getEvidenceTone(evidenceStatus?: EvidenceStatus) {
 	}[evidenceStatus ?? 'none'];
 }
 
+export function getEvidenceLabel(evidenceStatus?: EvidenceStatus) {
+	return {
+		verified: 'verificado',
+		partial: 'parcial',
+		none: 'sin evidencia'
+	}[evidenceStatus ?? 'none'];
+}
+
 export function formatSourceLabel(label: SourceLabel | string) {
 	return (
 		{
 			npm: 'npm',
 			'github-release': 'release',
 			changelog: 'changelog',
-			'migration-guide': 'migration guide',
+			'migration-guide': 'guía de migración',
 			docs: 'docs',
-			'fallback-search': 'fallback search',
+			'fallback-search': 'búsqueda fallback',
 			repository: 'repo',
 			repo: 'repo'
 		} as const
@@ -238,7 +262,7 @@ export function getEvidenceMessage(brief: Partial<PackageBrief>) {
 	const confidence = brief.confidence ?? 'low';
 
 	if (evidenceStatus === 'verified') {
-		return `Brief respaldado por fuentes verificadas. Confidence ${confidence}.`;
+		return `Brief respaldado por fuentes verificadas. ${getConfidenceLabel(confidence)}.`;
 	}
 
 	if (evidenceStatus === 'partial') {

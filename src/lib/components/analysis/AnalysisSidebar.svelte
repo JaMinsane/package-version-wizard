@@ -27,7 +27,7 @@
 				<p class="mt-3 text-sm leading-7 text-slate-300">{analysisStatusDescriptions[analysis.status]}</p>
 			</div>
 			<span class={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusTone(analysis.status)}`}>
-				{analysis.status}
+				{analysisStatusLabels[analysis.status]}
 			</span>
 		</div>
 
@@ -62,7 +62,7 @@
 		{/if}
 
 		<div class="mt-6 rounded-[1.6rem] border border-white/10 bg-slate-950/45 p-5">
-			<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Dispatch</p>
+			<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Webhook</p>
 			<div class="mt-4 grid gap-4">
 				<div>
 					<p class="text-xs uppercase tracking-[0.18em] text-slate-500">Webhook HTTP</p>
@@ -71,7 +71,7 @@
 					</p>
 				</div>
 				<div>
-					<p class="text-xs uppercase tracking-[0.18em] text-slate-500">Idempotency key</p>
+					<p class="text-xs uppercase tracking-[0.18em] text-slate-500">Clave de idempotencia</p>
 					<p class="mt-2 break-all font-mono text-xs leading-6 text-slate-300">
 						{analysis.lastIdempotencyKey ?? 'Aún no llegó callback'}
 					</p>
@@ -132,13 +132,13 @@
 						class="mt-2 w-full rounded-[1.1rem] border border-white/10 bg-slate-950/45 px-4 py-3 text-sm text-white"
 					>
 						<option value="daily" selected={(analysis.subscription?.frequency ?? 'daily') === 'daily'}>
-							Daily
+							Diario
 						</option>
 						<option value="weekdays" selected={analysis.subscription?.frequency === 'weekdays'}>
-							Weekdays
+							Lunes a viernes
 						</option>
 						<option value="twice_daily" selected={analysis.subscription?.frequency === 'twice_daily'}>
-							Twice daily
+							Dos veces al día
 						</option>
 					</select>
 				</label>
@@ -161,7 +161,7 @@
 		{#if !radarReady}
 			<div class="mt-4 rounded-[1.2rem] border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
 				Falta configurar `APP_BASE_URL` o `N8N_INTERNAL_API_TOKEN` para habilitar el radar
-				continuo end-to-end.
+				continuo de punta a punta.
 			</div>
 		{/if}
 	</section>

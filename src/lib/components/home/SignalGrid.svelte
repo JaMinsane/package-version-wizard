@@ -63,14 +63,14 @@
 					<div class="rounded-[1.1rem] border border-white/8 bg-white/[0.03] p-4">
 						<p class="text-sm font-semibold text-white">Brief ejecutivo</p>
 						<p class="mt-2 text-sm leading-7 text-slate-300">
-							Markdown renderizado con una lectura clara para priorizar el trabajo.
+							Resumen renderizado desde Markdown con una lectura clara para priorizar el trabajo.
 						</p>
 					</div>
 					<div class="rounded-[1.1rem] border border-white/8 bg-white/[0.03] p-4">
-						<p class="text-sm font-semibold text-white">Buckets y dependencias</p>
+						<p class="text-sm font-semibold text-white">Prioridades y dependencias</p>
 						<p class="mt-2 text-sm leading-7 text-slate-300">
-							Las tarjetas resaltan lo que requiere cambio ahora y lo que ya está cubierto por el
-							spec.
+							Las tarjetas resaltan lo que requiere cambio ahora y lo que ya cubre el rango
+							declarado.
 						</p>
 					</div>
 				</div>

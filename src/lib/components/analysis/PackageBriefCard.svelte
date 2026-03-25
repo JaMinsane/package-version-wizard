@@ -1,9 +1,12 @@
 <script lang="ts">
 	import {
+		getConfidenceLabel,
 		formatSourceDescriptor,
-		getConfidenceTone,
 		getEvidenceMessage,
+		getEvidenceLabel,
 		getEvidenceTone,
+		getRiskLevelLabel,
+		getConfidenceTone,
 		getRiskLevelTone
 	} from '$lib/ui/analysis/helpers';
 	import type { AnalysisPackageBrief } from '$lib/ui/analysis/types';
@@ -20,13 +23,13 @@
 		<h3 class="text-xl font-semibold text-white">{brief.name}</h3>
 		<div class="flex flex-wrap justify-end gap-2">
 			<span class={`rounded-full border px-3 py-1 text-xs font-semibold ${getRiskLevelTone(brief.riskLevel)}`}>
-				{brief.riskLevel ?? 'medium'} risk
+				{getRiskLevelLabel(brief.riskLevel)}
 			</span>
 			<span class={`rounded-full border px-3 py-1 text-xs font-semibold ${getConfidenceTone(brief.confidence)}`}>
-				confidence {brief.confidence ?? 'low'}
+				{getConfidenceLabel(brief.confidence)}
 			</span>
 			<span class={`rounded-full border px-3 py-1 text-xs font-semibold ${getEvidenceTone(brief.evidenceStatus)}`}>
-				{brief.evidenceStatus ?? 'none'}
+				{getEvidenceLabel(brief.evidenceStatus)}
 			</span>
 		</div>
 	</div>
@@ -39,7 +42,7 @@
 
 	{#if (brief.breakingChanges ?? []).length}
 		<div class="mt-5">
-			<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Breaking changes</p>
+			<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Cambios críticos</p>
 			<ul class="mt-2 space-y-2 text-sm text-slate-300">
 				{#each brief.breakingChanges ?? [] as change}
 					<li class="rounded-[1rem] border border-rose-400/12 bg-rose-400/10 px-3 py-2">{change}</li>
@@ -50,7 +53,7 @@
 
 	{#if (brief.recommendedActions ?? []).length}
 		<div class="mt-5">
-			<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Recommended actions</p>
+			<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Acciones sugeridas</p>
 			<ul class="mt-2 space-y-2 text-sm text-slate-300">
 				{#each brief.recommendedActions ?? [] as action}
 					<li class="rounded-[1rem] border border-white/8 bg-white/[0.04] px-3 py-2">{action}</li>
@@ -61,7 +64,7 @@
 
 	{#if (brief.testFocus ?? []).length}
 		<div class="mt-5">
-			<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Test focus</p>
+			<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Foco de pruebas</p>
 			<div class="mt-2 flex flex-wrap gap-2">
 				{#each brief.testFocus ?? [] as focus}
 					<span class="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-100">
@@ -74,7 +77,7 @@
 
 	{#if (brief.sources ?? []).length}
 		<div class="mt-5">
-			<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Evidence</p>
+			<p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Fuentes</p>
 			<div class="mt-2 grid gap-2">
 				{#each brief.sources ?? [] as source}
 					<a
@@ -87,7 +90,7 @@
 							<span class="font-medium text-white">{formatSourceDescriptor(source)}</span>
 							<span class="text-xs text-slate-500">{source.packageName}</span>
 						</span>
-						<span class="font-mono text-xs text-slate-500">open</span>
+						<span class="font-mono text-xs text-slate-500">abrir</span>
 					</a>
 				{/each}
 			</div>

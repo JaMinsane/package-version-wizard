@@ -43,7 +43,7 @@
 					rel="noreferrer"
 					class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-200 transition hover:border-cyan-300/25 hover:bg-white/8"
 				>
-					Abrir link público
+					Abrir URL pública
 				</a>
 			{/if}
 
@@ -57,15 +57,15 @@
 
 	<div class="mt-8 grid gap-4 lg:grid-cols-4">
 		<div class="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5">
-			<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Outdated</p>
+			<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pendientes</p>
 			<p class="mt-3 text-3xl font-semibold text-white">{analysis.stats.outdated}</p>
 		</div>
 		<div class="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5">
-			<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Major</p>
+			<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Cambios major</p>
 			<p class="mt-3 text-3xl font-semibold text-white">{analysis.stats.majors}</p>
 		</div>
 		<div class="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5">
-			<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Minor + Patch</p>
+			<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Minor + patch</p>
 			<p class="mt-3 text-3xl font-semibold text-white">
 				{analysis.stats.minors + analysis.stats.patches}
 			</p>

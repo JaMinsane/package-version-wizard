@@ -34,6 +34,7 @@ Priorities, in order:
 
 Prefer complete, copy-pasteable code.
 Avoid vague pseudo-code unless explicitly requested.
+All user-oriented text should be primarily in natural technical Spanish. Use common programmer anglicisms when they improve clarity.
 
 ## Commands
 
