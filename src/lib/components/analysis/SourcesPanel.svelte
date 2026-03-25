@@ -9,24 +9,35 @@
 	let { sources }: Props = $props();
 </script>
 
-<section class="surface-panel rounded-[2rem] p-6 sm:p-8">
-	<p class="section-label">Fuentes</p>
-	<h2 class="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">Trazabilidad del análisis</h2>
+<section class="terminal-window">
+	<div class="terminal-bar">
+		<div class="terminal-dots">
+			<span class="terminal-dot terminal-dot--red"></span>
+			<span class="terminal-dot terminal-dot--yellow"></span>
+			<span class="terminal-dot terminal-dot--green"></span>
+		</div>
+		<span class="terminal-title">$ sources --list</span>
+	</div>
 
-	<div class="mt-6 grid gap-3">
-		{#each sources as source}
-			<a
-				class="flex items-center justify-between gap-3 rounded-[1.25rem] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-300 transition hover:border-cyan-300/25 hover:bg-white/8"
-				href={source.url}
-				target="_blank"
-				rel="noreferrer"
-			>
-				<span>
-					<span class="font-semibold text-white">{source.packageName}</span>
-					<span class="ml-2 text-slate-500">{formatSourceDescriptor(source)}</span>
-				</span>
-				<span class="font-mono text-xs text-slate-500">abrir</span>
-			</a>
-		{/each}
+	<div class="terminal-body">
+		<p class="section-label">Fuentes</p>
+		<h2 class="mt-3 text-2xl font-bold tracking-tight text-white">Trazabilidad del análisis</h2>
+
+		<div class="mt-6 grid gap-3">
+			{#each sources as source}
+				<a
+					class="link-row"
+					href={source.url}
+					target="_blank"
+					rel="noreferrer"
+				>
+					<span>
+						<span class="font-bold text-white">{source.packageName}</span>
+						<span class="ml-2 text-[var(--text-dim)]">{formatSourceDescriptor(source)}</span>
+					</span>
+					<span class="text-xs text-[var(--text-dim)]">abrir →</span>
+				</a>
+			{/each}
+		</div>
 	</div>
 </section>

@@ -1,90 +1,119 @@
 <script lang="ts">
 	import { homeOutputCards, homeStoryCards } from '$lib/ui/home/content';
 
-	function getAccentClasses(accent: 'cyan' | 'violet' | 'amber' | 'emerald') {
+	function getAccentClass(accent: 'cyan' | 'violet' | 'amber' | 'emerald') {
 		return {
-			cyan: 'border-cyan-400/15 bg-cyan-400/8',
-			violet: 'border-violet-400/15 bg-violet-400/8',
-			amber: 'border-amber-400/15 bg-amber-400/8',
-			emerald: 'border-emerald-400/15 bg-emerald-400/8'
+			cyan: 'border-[rgba(0,229,255,0.2)] shadow-[inset_0_0_30px_rgba(0,229,255,0.04)]',
+			violet: 'border-[rgba(191,90,242,0.2)] shadow-[inset_0_0_30px_rgba(191,90,242,0.04)]',
+			amber: 'border-[rgba(255,170,0,0.2)] shadow-[inset_0_0_30px_rgba(255,170,0,0.04)]',
+			emerald: 'border-[rgba(15,255,106,0.2)] shadow-[inset_0_0_30px_rgba(15,255,106,0.04)]'
+		}[accent];
+	}
+
+	function getAccentBadge(accent: 'cyan' | 'violet' | 'amber' | 'emerald') {
+		return {
+			cyan: 'neon-badge--cyan',
+			violet: 'neon-badge--violet',
+			amber: 'neon-badge--amber',
+			emerald: 'neon-badge--green'
 		}[accent];
 	}
 </script>
 
 <section class="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-	<div class="surface-panel rounded-[2rem] p-6 sm:p-8">
-		<p class="section-label">Qué se obtiene</p>
-		<h2 class="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">
-			Señal útil antes de ejecutar cambios
-		</h2>
-		<p class="mt-3 text-sm leading-7 text-slate-300 sm:text-base">
-			La interfaz organiza el resultado para que el equipo vea valor rápido sin perder trazabilidad
-			técnica.
-		</p>
+	<div class="terminal-window">
+		<div class="terminal-bar">
+			<div class="terminal-dots">
+				<span class="terminal-dot terminal-dot--red"></span>
+				<span class="terminal-dot terminal-dot--yellow"></span>
+				<span class="terminal-dot terminal-dot--green"></span>
+			</div>
+			<span class="terminal-title">$ cat signals.log</span>
+		</div>
+		<div class="terminal-body">
+			<p class="section-label">Qué se obtiene</p>
+			<h2 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+				Señal útil antes de ejecutar cambios
+			</h2>
+			<p class="mt-3 text-sm leading-7 text-[var(--text-muted)] sm:text-base">
+				La interfaz organiza el resultado para que el equipo vea valor rápido sin perder trazabilidad
+				técnica.
+			</p>
 
-		<div class="mt-6 grid gap-4">
-			{#each homeStoryCards as card}
-				<article class={`rounded-[1.5rem] border p-5 ${getAccentClasses(card.accent)}`}>
-					<p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-300">{card.eyebrow}</p>
-					<h3 class="mt-3 text-xl font-semibold text-white">{card.title}</h3>
-					<p class="mt-3 text-sm leading-7 text-slate-300">{card.description}</p>
-				</article>
-			{/each}
+			<div class="mt-6 grid gap-4">
+				{#each homeStoryCards as card}
+					<article class={`rounded-lg border bg-[rgba(10,10,15,0.5)] p-5 ${getAccentClass(card.accent)}`}>
+						<span class={`neon-badge ${getAccentBadge(card.accent)}`}>{card.eyebrow}</span>
+						<h3 class="mt-3 text-lg font-bold text-white">{card.title}</h3>
+						<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">{card.description}</p>
+					</article>
+				{/each}
+			</div>
 		</div>
 	</div>
 
-	<div class="surface-panel rounded-[2rem] p-6 sm:p-8">
-		<div class="flex flex-wrap items-start justify-between gap-4">
-			<div>
-				<p class="section-label">Resultados</p>
-				<h2 class="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">
-					Una salida preparada para operar
-				</h2>
+	<div class="terminal-window">
+		<div class="terminal-bar">
+			<div class="terminal-dots">
+				<span class="terminal-dot terminal-dot--red"></span>
+				<span class="terminal-dot terminal-dot--yellow"></span>
+				<span class="terminal-dot terminal-dot--green"></span>
 			</div>
-			<span class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-300">
-				Resumen + dependencias + evidencia
-			</span>
+			<span class="terminal-title">$ wizard --output</span>
 		</div>
+		<div class="terminal-body">
+			<div class="flex flex-wrap items-start justify-between gap-4">
+				<div>
+					<p class="section-label">Resultados</p>
+					<h2 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+						Una salida preparada para operar
+					</h2>
+				</div>
+				<span class="neon-badge neon-badge--muted">
+					Resumen + dependencias + evidencia
+				</span>
+			</div>
 
-		<div class="mt-6 grid gap-4 md:grid-cols-3">
-			{#each homeOutputCards as card}
-				<article class={`rounded-[1.5rem] border p-5 ${getAccentClasses(card.accent)}`}>
-					<p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-300">{card.eyebrow}</p>
-					<h3 class="mt-3 text-lg font-semibold text-white">{card.title}</h3>
-					<p class="mt-3 text-sm leading-7 text-slate-300">{card.description}</p>
-				</article>
-			{/each}
-		</div>
+			<div class="mt-6 grid gap-4 md:grid-cols-3">
+				{#each homeOutputCards as card}
+					<article class={`rounded-lg border bg-[rgba(10,10,15,0.5)] p-5 ${getAccentClass(card.accent)}`}>
+						<span class={`neon-badge ${getAccentBadge(card.accent)}`}>{card.eyebrow}</span>
+						<h3 class="mt-3 text-base font-bold text-white">{card.title}</h3>
+						<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">{card.description}</p>
+					</article>
+				{/each}
+			</div>
 
-		<div class="mt-6 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-			<div class="rounded-[1.6rem] border border-white/10 bg-slate-950/45 p-5">
-				<p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Vista principal</p>
-				<div class="mt-4 grid gap-3">
-					<div class="rounded-[1.1rem] border border-white/8 bg-white/[0.03] p-4">
-						<p class="text-sm font-semibold text-white">Brief ejecutivo</p>
-						<p class="mt-2 text-sm leading-7 text-slate-300">
-							Resumen renderizado desde Markdown con una lectura clara para priorizar el trabajo.
-						</p>
-					</div>
-					<div class="rounded-[1.1rem] border border-white/8 bg-white/[0.03] p-4">
-						<p class="text-sm font-semibold text-white">Prioridades y dependencias</p>
-						<p class="mt-2 text-sm leading-7 text-slate-300">
-							Las tarjetas resaltan lo que requiere cambio ahora y lo que ya cubre el rango
-							declarado.
-						</p>
+			<div class="mt-6 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+				<div class="rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.6)] p-5">
+					<p class="text-xs font-bold uppercase tracking-widest text-[var(--text-dim)]">Vista principal</p>
+					<div class="mt-4 grid gap-3">
+						<div class="data-cell">
+							<p class="text-sm font-bold text-white">Brief ejecutivo</p>
+							<p class="mt-2 text-sm leading-7 text-[var(--text-muted)]">
+								Resumen renderizado desde Markdown con una lectura clara para priorizar el trabajo.
+							</p>
+						</div>
+						<div class="data-cell">
+							<p class="text-sm font-bold text-white">Prioridades y dependencias</p>
+							<p class="mt-2 text-sm leading-7 text-[var(--text-muted)]">
+								Las tarjetas resaltan lo que requiere cambio ahora y lo que ya cubre el rango
+								declarado.
+							</p>
+						</div>
 					</div>
 				</div>
-			</div>
 
-			<div class="rounded-[1.6rem] border border-cyan-400/12 bg-[linear-gradient(180deg,rgba(34,211,238,0.12),rgba(34,211,238,0.04))] p-5">
-				<p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">Automatización</p>
-				<h3 class="mt-3 text-xl font-semibold text-white">
-					El radar no compite con la lectura, la extiende.
-				</h3>
-				<p class="mt-3 text-sm leading-7 text-slate-300">
-					La configuración de Slack permanece disponible cuando quieres activar seguimiento
-					continuo, pero sin desplazar el análisis central.
-				</p>
+				<div class="rounded-lg border border-[rgba(0,229,255,0.15)] bg-[rgba(0,229,255,0.04)] p-5">
+					<span class="neon-badge neon-badge--cyan">Automatización</span>
+					<h3 class="mt-3 text-lg font-bold text-white">
+						El radar no compite con la lectura, la extiende.
+					</h3>
+					<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">
+						La configuración de Slack permanece disponible cuando quieres activar seguimiento
+						continuo, pero sin desplazar el análisis central.
+					</p>
+				</div>
 			</div>
 		</div>
 	</div>

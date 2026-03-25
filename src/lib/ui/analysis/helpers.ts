@@ -37,20 +37,20 @@ export function formatTimestamp(value?: string) {
 
 export function getStatusTone(status: AnalysisStatus) {
 	return {
-		queued: 'border-violet-400/20 bg-violet-400/12 text-violet-100',
-		enriching: 'border-cyan-400/20 bg-cyan-400/12 text-cyan-100',
-		summarizing: 'border-amber-400/20 bg-amber-400/12 text-amber-100',
-		completed: 'border-emerald-400/20 bg-emerald-400/12 text-emerald-100',
-		failed: 'border-rose-400/20 bg-rose-400/12 text-rose-100'
+		queued: 'neon-badge neon-badge--violet',
+		enriching: 'neon-badge neon-badge--cyan',
+		summarizing: 'neon-badge neon-badge--amber',
+		completed: 'neon-badge neon-badge--green',
+		failed: 'neon-badge neon-badge--red'
 	}[status];
 }
 
 export function getDecisionTone(decision: DependencyDecision) {
 	return {
-		upgrade_now: 'border-rose-400/20 bg-rose-400/12 text-rose-100',
-		upgrade_later: 'border-amber-400/20 bg-amber-400/12 text-amber-100',
-		replace: 'border-fuchsia-400/20 bg-fuchsia-400/12 text-fuchsia-100',
-		hold: 'border-white/10 bg-white/8 text-slate-200'
+		upgrade_now: 'neon-badge neon-badge--red',
+		upgrade_later: 'neon-badge neon-badge--amber',
+		replace: 'neon-badge neon-badge--violet',
+		hold: 'neon-badge neon-badge--muted'
 	}[decision];
 }
 
@@ -104,10 +104,10 @@ export function isCoveredBySpec(dependency: AnalysisDependency) {
 
 export function getDependencyStatusTone(status: DependencyDisplayStatus) {
 	return {
-		outdated: 'border-rose-400/20 bg-rose-400/12 text-rose-100',
-		covered_by_range: 'border-cyan-400/20 bg-cyan-400/12 text-cyan-100',
-		up_to_date: 'border-emerald-400/20 bg-emerald-400/12 text-emerald-100',
-		manual_review: 'border-white/10 bg-white/8 text-slate-200'
+		outdated: 'neon-badge neon-badge--red',
+		covered_by_range: 'neon-badge neon-badge--cyan',
+		up_to_date: 'neon-badge neon-badge--green',
+		manual_review: 'neon-badge neon-badge--muted'
 	}[status];
 }
 
@@ -164,9 +164,9 @@ export function formatDependencyVersionLine(dependency: AnalysisDependency) {
 
 export function getRiskLevelTone(riskLevel?: RiskLevel) {
 	return {
-		high: 'border-rose-400/20 bg-rose-400/12 text-rose-100',
-		medium: 'border-amber-400/20 bg-amber-400/12 text-amber-100',
-		low: 'border-emerald-400/20 bg-emerald-400/12 text-emerald-100'
+		high: 'neon-badge neon-badge--red',
+		medium: 'neon-badge neon-badge--amber',
+		low: 'neon-badge neon-badge--green'
 	}[riskLevel ?? 'medium'];
 }
 
@@ -180,9 +180,9 @@ export function getRiskLevelLabel(riskLevel?: RiskLevel) {
 
 export function getConfidenceTone(confidence?: ConfidenceLevel) {
 	return {
-		high: 'border-emerald-400/20 bg-emerald-400/12 text-emerald-100',
-		medium: 'border-cyan-400/20 bg-cyan-400/12 text-cyan-100',
-		low: 'border-white/10 bg-white/8 text-slate-200'
+		high: 'neon-badge neon-badge--green',
+		medium: 'neon-badge neon-badge--cyan',
+		low: 'neon-badge neon-badge--muted'
 	}[confidence ?? 'low'];
 }
 
@@ -196,9 +196,9 @@ export function getConfidenceLabel(confidence?: ConfidenceLevel) {
 
 export function getEvidenceTone(evidenceStatus?: EvidenceStatus) {
 	return {
-		verified: 'border-emerald-400/20 bg-emerald-400/12 text-emerald-100',
-		partial: 'border-amber-400/20 bg-amber-400/12 text-amber-100',
-		none: 'border-white/10 bg-white/8 text-slate-200'
+		verified: 'neon-badge neon-badge--green',
+		partial: 'neon-badge neon-badge--amber',
+		none: 'neon-badge neon-badge--muted'
 	}[evidenceStatus ?? 'none'];
 }
 

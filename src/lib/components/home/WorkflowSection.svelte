@@ -2,33 +2,42 @@
 	import { homeFlowSteps } from '$lib/ui/home/content';
 </script>
 
-<section class="surface-panel rounded-[2rem] p-6 sm:p-8">
-	<div class="flex flex-wrap items-end justify-between gap-4">
-		<div class="max-w-2xl">
-			<p class="section-label">Flujo</p>
-			<h2 class="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">
-				Una secuencia corta, una lectura más útil
-			</h2>
-			<p class="mt-3 text-sm leading-7 text-slate-300 sm:text-base">
-				La experiencia se enfoca en mostrar progreso, decisión y continuidad sin añadir pasos
-				superfluos.
-			</p>
+<section class="terminal-window">
+	<div class="terminal-bar">
+		<div class="terminal-dots">
+			<span class="terminal-dot terminal-dot--red"></span>
+			<span class="terminal-dot terminal-dot--yellow"></span>
+			<span class="terminal-dot terminal-dot--green"></span>
 		</div>
-		<span class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-300">
-			SSR · server-first · URL compartible
-		</span>
+		<span class="terminal-title">$ wizard --pipeline</span>
 	</div>
 
-	<div class="mt-8 grid gap-4 xl:grid-cols-3">
-		{#each homeFlowSteps as step}
-			<article class="rounded-[1.7rem] border border-white/10 bg-white/[0.03] p-5">
-				<p class="font-mono text-xs uppercase tracking-[0.3em] text-cyan-200">{step.index}</p>
-				<h3 class="mt-4 text-2xl font-semibold text-white">{step.title}</h3>
-				<p class="mt-3 text-sm leading-7 text-slate-300">{step.description}</p>
-				<div class="mt-5 rounded-[1.2rem] border border-white/8 bg-slate-950/45 p-4">
-					<p class="text-sm leading-7 text-slate-300">{step.detail}</p>
-				</div>
-			</article>
-		{/each}
+	<div class="terminal-body">
+		<div class="flex flex-wrap items-end justify-between gap-4">
+			<div class="max-w-2xl">
+				<p class="section-label">Flujo</p>
+				<h2 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+					Una secuencia corta, una lectura más útil
+				</h2>
+				<p class="mt-3 text-sm leading-7 text-[var(--text-muted)] sm:text-base">
+					La experiencia se enfoca en mostrar progreso, decisión y continuidad sin añadir pasos
+					superfluos.
+				</p>
+			</div>
+			<span class="neon-badge neon-badge--muted">SSR · server-first · URL compartible</span>
+		</div>
+
+		<div class="mt-8 grid gap-4 xl:grid-cols-3">
+			{#each homeFlowSteps as step}
+				<article class="rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.5)] p-5">
+					<p class="text-xs font-bold uppercase tracking-[0.3em] text-[var(--neon-green)]" style="text-shadow: 0 0 8px rgba(15,255,106,0.3)">[{step.index}]</p>
+					<h3 class="mt-4 text-xl font-bold text-white">{step.title}</h3>
+					<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">{step.description}</p>
+					<div class="data-cell mt-5">
+						<p class="text-sm leading-7 text-[var(--text-muted)]">{step.detail}</p>
+					</div>
+				</article>
+			{/each}
+		</div>
 	</div>
 </section>

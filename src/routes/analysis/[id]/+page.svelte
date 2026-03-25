@@ -153,16 +153,26 @@
 				{/if}
 
 				{#if activeAnalysis.callbackPayload?.packageBriefs.length}
-					<section class="surface-panel rounded-[2rem] p-6 sm:p-8">
-						<p class="section-label">Paquetes explicados</p>
-						<h2 class="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">
-							Contexto por paquete
-						</h2>
+					<section class="terminal-window">
+						<div class="terminal-bar">
+							<div class="terminal-dots">
+								<span class="terminal-dot terminal-dot--red"></span>
+								<span class="terminal-dot terminal-dot--yellow"></span>
+								<span class="terminal-dot terminal-dot--green"></span>
+							</div>
+							<span class="terminal-title">$ briefs --all</span>
+						</div>
+						<div class="terminal-body">
+							<p class="section-label">Paquetes explicados</p>
+							<h2 class="mt-3 text-2xl font-bold tracking-tight text-white">
+								Contexto por paquete
+							</h2>
 
-						<div class="mt-6 grid gap-4 xl:grid-cols-2">
-							{#each activeAnalysis.callbackPayload.packageBriefs as brief}
-								<PackageBriefCard {brief} />
-							{/each}
+							<div class="mt-6 grid gap-4 xl:grid-cols-2">
+								{#each activeAnalysis.callbackPayload.packageBriefs as brief}
+									<PackageBriefCard {brief} />
+								{/each}
+							</div>
 						</div>
 					</section>
 				{/if}
