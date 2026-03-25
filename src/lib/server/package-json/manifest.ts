@@ -59,6 +59,10 @@ export function parsePackageJsonText(text: string, fileName = 'package.json'): P
 
 function normalizeManifestDependencies(manifest: PackageJsonManifest): ManifestDependencyInput[] {
 	const entries: ManifestDependencyInput[] = [];
+	const peerDependenciesMeta =
+		manifest.peerDependenciesMeta && typeof manifest.peerDependenciesMeta === 'object'
+			? manifest.peerDependenciesMeta
+			: {};
 
 	for (const group of DEPENDENCY_GROUPS) {
 		const value = manifest[group];
@@ -75,7 +79,15 @@ function normalizeManifestDependencies(manifest: PackageJsonManifest): ManifestD
 			entries.push({
 				name: name.trim(),
 				currentVersion: rawVersion.trim(),
-				group
+				group,
+				peerOptional:
+					group === 'peerDependencies' &&
+					Boolean(
+						peerDependenciesMeta[name] &&
+							typeof peerDependenciesMeta[name] === 'object' &&
+							!Array.isArray(peerDependenciesMeta[name]) &&
+							(peerDependenciesMeta[name] as { optional?: unknown }).optional === true
+					)
 			});
 		}
 	}

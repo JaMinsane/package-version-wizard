@@ -302,7 +302,12 @@ function buildN8nAnalysisRequest(input: {
 			deprecated: input.stats.deprecated
 		},
 		candidates: input.candidates
-			.filter((candidate) => candidate.deprecated || candidate.diffType !== 'unknown')
+			.filter(
+				(candidate) =>
+					candidate.deprecated ||
+					candidate.diffType !== 'unknown' ||
+					candidate.resolution.requiresManualReview
+			)
 			.sort((left, right) => right.riskScore - left.riskScore)
 			.slice(0, MAX_N8N_CANDIDATES)
 	};
@@ -319,7 +324,8 @@ function stripDependencyForN8n(dependency: AnalysisSnapshot['dependencies'][numb
 		publishedAt: dependency.publishedAt,
 		repositoryUrl: dependency.repositoryUrl,
 		riskScore: dependency.riskScore,
-		sourceUrls: dependency.sourceUrls
+		sourceUrls: dependency.sourceUrls,
+		resolution: dependency.resolution
 	};
 }
 

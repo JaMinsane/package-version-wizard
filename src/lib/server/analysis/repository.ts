@@ -3,6 +3,7 @@ import { getDb } from '$lib/server/db/client';
 import type {
 	AnalysisSnapshot,
 	AnalysisStatus,
+	DependencyResolution,
 	DependencySnapshot,
 	DependencyStats,
 	N8nAnalysisCallback,
@@ -50,6 +51,7 @@ interface DependencyRow {
 	risk_score: number;
 	decision: DependencySnapshot['decision'] | null;
 	source_urls_json: unknown;
+	resolution_json: unknown;
 }
 
 interface SubscriptionRow {
@@ -197,7 +199,8 @@ export async function savePreparedAnalysisData(input: {
 					repository_url,
 					risk_score,
 					decision,
-					source_urls_json
+					source_urls_json,
+					resolution_json
 				)
 				VALUES (
 					${input.analysisId},
@@ -211,7 +214,8 @@ export async function savePreparedAnalysisData(input: {
 					${dependency.repositoryUrl ?? null},
 					${dependency.riskScore},
 					${dependency.decision},
-					CAST(${JSON.stringify(dependency.sourceUrls)} AS jsonb)
+					CAST(${JSON.stringify(dependency.sourceUrls)} AS jsonb),
+					CAST(${JSON.stringify(dependency.resolution)} AS jsonb)
 				)
 			`;
 		}
@@ -271,7 +275,8 @@ export async function getAnalysisById(id: string): Promise<AnalysisSnapshot | nu
 			repository_url,
 			risk_score,
 			decision,
-			source_urls_json
+			source_urls_json,
+			resolution_json
 		FROM analysis_dependencies
 		WHERE analysis_id = ${id}
 		ORDER BY risk_score DESC, name ASC
@@ -616,7 +621,27 @@ function mapDependencyRow(row: DependencyRow): DependencySnapshot {
 		repositoryUrl: row.repository_url ?? undefined,
 		riskScore: row.risk_score,
 		decision: row.decision ?? 'hold',
-		sourceUrls: parseJsonColumn<string[]>(row.source_urls_json)
+		sourceUrls: parseJsonColumn<string[]>(row.source_urls_json),
+		resolution: row.resolution_json
+			? parseJsonColumn<DependencyResolution>(row.resolution_json)
+			: buildLegacyResolution(row)
+	};
+}
+
+function buildLegacyResolution(row: DependencyRow): DependencyResolution {
+	return {
+		declaredSpec: row.current_version,
+		specKind: 'unknown',
+		wantedVersion: row.diff_type === 'unknown' ? undefined : row.current_version,
+		latestVersion: row.latest_version,
+		comparisonStatus:
+			row.diff_type === 'unknown'
+				? 'unresolved'
+				: row.diff_type === 'patch' || row.diff_type === 'minor' || row.diff_type === 'major'
+					? 'outdated'
+					: 'up_to_date',
+		requiresManualReview: row.diff_type === 'unknown',
+		deprecationStatus: row.deprecated ? 'wanted_deprecated' : 'none'
 	};
 }
 

@@ -2,11 +2,17 @@ import semver from 'semver';
 
 import type {
 	DependencyDecision,
+	DependencyResolution,
 	DependencySnapshot,
 	DependencyStats,
 	DiffType,
 	ManifestDependencyInput
 } from '$lib/server/analysis/types';
+import {
+	enrichDependency,
+	getRegistryPackageName,
+	type NpmPackageMetadata
+} from '$lib/server/npm/spec-resolution';
 
 const NPM_REGISTRY_BASE_URL = 'https://registry.npmjs.org';
 const NPM_REQUEST_TIMEOUT_MS = 8_000;
@@ -23,37 +29,32 @@ const CORE_PACKAGES = new Set([
 	'webpack'
 ]);
 
-interface NpmPackageMetadata {
-	'dist-tags'?: {
-		latest?: string;
-	};
-	time?: Record<string, string>;
-	repository?: string | { url?: string };
-	versions?: Record<string, { deprecated?: string }>;
-}
-
 export async function enrichManifestDependencies(
 	inputs: ManifestDependencyInput[]
 ): Promise<{ dependencies: DependencySnapshot[]; stats: DependencyStats }> {
 	const cache = new Map<string, Promise<NpmPackageMetadata | null>>();
 	const dependencies = await mapWithConcurrency(inputs, PACKAGE_ENRICHMENT_CONCURRENCY, async (entry) => {
-		let task = cache.get(entry.name);
+		const registryPackageName = getRegistryPackageName(entry);
+		let metadataTask: Promise<NpmPackageMetadata | null> | null = null;
 
-		if (!task) {
-			task = fetchNpmPackageMetadata(entry.name);
-			cache.set(entry.name, task);
+		if (registryPackageName) {
+			metadataTask = cache.get(registryPackageName) ?? null;
+
+			if (!metadataTask) {
+				metadataTask = fetchNpmPackageMetadata(registryPackageName);
+				cache.set(registryPackageName, metadataTask);
+			}
 		}
 
-		const metadata = await task;
+		const metadata = await (metadataTask ?? Promise.resolve(null));
 		const enriched = enrichDependency(entry, metadata);
-		const diffType = inferDiffType(entry.currentVersion, enriched.latestVersion);
+		const diffType = inferDiffType(enriched.resolution);
 		const riskScore = calculateRiskScore({
-			latestVersion: enriched.latestVersion,
-			currentVersion: entry.currentVersion,
-			deprecated: enriched.deprecated,
-			diffType,
+			name: entry.name,
 			group: entry.group,
-			name: entry.name
+			diffType,
+			deprecated: enriched.deprecated,
+			resolution: enriched.resolution
 		});
 
 		return {
@@ -63,11 +64,10 @@ export async function enrichManifestDependencies(
 			diffType,
 			riskScore,
 			decision: determineDecision({
-				currentVersion: entry.currentVersion,
-				latestVersion: enriched.latestVersion,
-				deprecated: enriched.deprecated,
 				diffType,
-				riskScore
+				deprecated: enriched.deprecated,
+				riskScore,
+				resolution: enriched.resolution
 			})
 		} satisfies DependencySnapshot;
 	});
@@ -77,27 +77,6 @@ export async function enrichManifestDependencies(
 	return {
 		dependencies: dependencies.sort(sortDependencies),
 		stats
-	};
-}
-
-function enrichDependency(
-	input: ManifestDependencyInput,
-	metadata: NpmPackageMetadata | null
-): Omit<DependencySnapshot, 'group' | 'currentVersion' | 'diffType' | 'riskScore' | 'decision'> {
-	const latestVersion = normalizeLatestVersion(input.currentVersion, metadata?.['dist-tags']?.latest);
-	const repositoryUrl = normalizeRepositoryUrl(metadata?.repository);
-	const publishedAt = metadata?.time?.[latestVersion];
-	const deprecated =
-		Boolean(metadata?.versions?.[latestVersion]?.deprecated) ||
-		Boolean(getManifestRangeVersion(input.currentVersion) && metadata?.versions?.[getManifestRangeVersion(input.currentVersion) ?? '']?.deprecated);
-
-	return {
-		name: input.name,
-		latestVersion,
-		deprecated,
-		publishedAt,
-		repositoryUrl,
-		sourceUrls: buildSourceUrls(input.name, repositoryUrl)
 	};
 }
 
@@ -140,9 +119,7 @@ function buildStats(dependencies: DependencySnapshot[]): DependencyStats {
 	};
 
 	for (const dependency of dependencies) {
-		const outdated = isOutdated(dependency.currentVersion, dependency.latestVersion);
-
-		if (outdated) {
+		if (isOutdated(dependency.resolution)) {
 			stats.outdated += 1;
 		}
 
@@ -166,14 +143,16 @@ function buildStats(dependencies: DependencySnapshot[]): DependencyStats {
 	return stats;
 }
 
-function inferDiffType(currentVersion: string, latestVersion: string): DiffType {
-	const current = getManifestRangeVersion(currentVersion);
-
-	if (!current || !semver.valid(latestVersion) || !semver.lt(current, latestVersion)) {
+function inferDiffType(resolution: DependencyResolution): DiffType {
+	if (!resolution.wantedVersion || !resolution.latestVersion) {
 		return 'unknown';
 	}
 
-	const diff = semver.diff(current, latestVersion);
+	if (!semver.lt(resolution.wantedVersion, resolution.latestVersion)) {
+		return 'unknown';
+	}
+
+	const diff = semver.diff(resolution.wantedVersion, resolution.latestVersion);
 
 	if (diff?.startsWith('major')) {
 		return 'major';
@@ -192,11 +171,10 @@ function inferDiffType(currentVersion: string, latestVersion: string): DiffType 
 
 function calculateRiskScore(input: {
 	name: string;
-	currentVersion: string;
-	latestVersion: string;
 	group: ManifestDependencyInput['group'];
 	diffType: DiffType;
 	deprecated: boolean;
+	resolution: DependencyResolution;
 }) {
 	let score = {
 		patch: 15,
@@ -225,7 +203,15 @@ function calculateRiskScore(input: {
 		score += 10;
 	}
 
-	if (!isOutdated(input.currentVersion, input.latestVersion) && !input.deprecated) {
+	if (input.resolution.requiresManualReview) {
+		score += 15;
+	}
+
+	if (input.resolution.peerOptional) {
+		score -= 15;
+	}
+
+	if (!isOutdated(input.resolution) && !input.deprecated && !input.resolution.requiresManualReview) {
 		score = Math.max(score - 15, 0);
 	}
 
@@ -233,18 +219,21 @@ function calculateRiskScore(input: {
 }
 
 function determineDecision(input: {
-	currentVersion: string;
-	latestVersion: string;
 	diffType: DiffType;
 	deprecated: boolean;
 	riskScore: number;
+	resolution: DependencyResolution;
 }): DependencyDecision {
-	if (!isOutdated(input.currentVersion, input.latestVersion) && !input.deprecated) {
+	if (input.deprecated) {
+		return 'replace';
+	}
+
+	if (input.resolution.requiresManualReview) {
 		return 'hold';
 	}
 
-	if (input.deprecated) {
-		return 'replace';
+	if (!isOutdated(input.resolution)) {
+		return 'hold';
 	}
 
 	if (input.diffType === 'major' || input.riskScore >= 70) {
@@ -258,45 +247,12 @@ function determineDecision(input: {
 	return 'hold';
 }
 
-function getManifestRangeVersion(currentVersion: string) {
-	return semver.minVersion(currentVersion)?.version ?? semver.coerce(currentVersion)?.version ?? null;
-}
-
-function normalizeLatestVersion(currentVersion: string, latestVersion: string | undefined) {
-	if (latestVersion && semver.valid(latestVersion)) {
-		return latestVersion;
-	}
-
-	return getManifestRangeVersion(currentVersion) ?? currentVersion;
-}
-
-function isOutdated(currentVersion: string, latestVersion: string) {
-	const current = getManifestRangeVersion(currentVersion);
-
-	return Boolean(current && semver.valid(latestVersion) && semver.lt(current, latestVersion));
-}
-
-function normalizeRepositoryUrl(value: NpmPackageMetadata['repository']) {
-	const raw = typeof value === 'string' ? value : value?.url;
-
-	if (!raw) {
-		return undefined;
-	}
-
-	return raw
-		.replace(/^git\+/, '')
-		.replace(/\.git$/i, '')
-		.replace(/^git:\/\//, 'https://');
-}
-
-function buildSourceUrls(name: string, repositoryUrl?: string) {
-	const urls = [`https://www.npmjs.com/package/${name}`];
-
-	if (repositoryUrl) {
-		urls.push(repositoryUrl);
-	}
-
-	return urls;
+function isOutdated(resolution: DependencyResolution) {
+	return Boolean(
+		resolution.wantedVersion &&
+			resolution.latestVersion &&
+			semver.lt(resolution.wantedVersion, resolution.latestVersion)
+	);
 }
 
 function sortDependencies(left: DependencySnapshot, right: DependencySnapshot) {
@@ -306,6 +262,10 @@ function sortDependencies(left: DependencySnapshot, right: DependencySnapshot) {
 
 	if (left.deprecated !== right.deprecated) {
 		return Number(right.deprecated) - Number(left.deprecated);
+	}
+
+	if (left.resolution.requiresManualReview !== right.resolution.requiresManualReview) {
+		return Number(right.resolution.requiresManualReview) - Number(left.resolution.requiresManualReview);
 	}
 
 	return left.name.localeCompare(right.name);

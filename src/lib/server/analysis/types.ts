@@ -6,6 +6,34 @@ export type DependencyGroup =
 
 export type DiffType = 'patch' | 'minor' | 'major' | 'unknown';
 
+export type DependencySpecKind =
+	| 'semver'
+	| 'dist_tag'
+	| 'alias'
+	| 'git'
+	| 'github'
+	| 'tarball'
+	| 'file'
+	| 'workspace'
+	| 'unknown';
+
+export type DependencyComparisonStatus =
+	| 'up_to_date'
+	| 'outdated'
+	| 'channel_pinned'
+	| 'manual_review'
+	| 'unsupported'
+	| 'unresolved';
+
+export type DependencyDeprecationStatus =
+	| 'none'
+	| 'wanted_deprecated'
+	| 'latest_deprecated'
+	| 'range_fully_deprecated'
+	| 'range_partially_deprecated'
+	| 'unresolved'
+	| 'unsupported';
+
 export type CallbackStatus = 'completed' | 'failed';
 
 export type AnalysisStatus = 'queued' | 'enriching' | 'summarizing' | 'completed' | 'failed';
@@ -38,6 +66,20 @@ export interface DependencyStats {
 	deprecated: number;
 }
 
+export interface DependencyResolution {
+	declaredSpec: string;
+	specKind: DependencySpecKind;
+	registryPackageName?: string;
+	wantedVersion?: string;
+	latestVersion?: string;
+	comparisonStatus: DependencyComparisonStatus;
+	requiresManualReview: boolean;
+	deprecationStatus: DependencyDeprecationStatus;
+	deprecationMessage?: string;
+	deprecationSourceVersion?: string;
+	peerOptional?: boolean;
+}
+
 export interface DependencyCandidate {
 	name: string;
 	currentVersion: string;
@@ -49,6 +91,7 @@ export interface DependencyCandidate {
 	repositoryUrl?: string;
 	riskScore: number;
 	sourceUrls: string[];
+	resolution: DependencyResolution;
 }
 
 export interface DependencySnapshot extends DependencyCandidate {
@@ -148,12 +191,14 @@ export interface PackageJsonManifest {
 	devDependencies?: Record<string, unknown>;
 	peerDependencies?: Record<string, unknown>;
 	optionalDependencies?: Record<string, unknown>;
+	peerDependenciesMeta?: Record<string, { optional?: unknown } | unknown>;
 }
 
 export interface ManifestDependencyInput {
 	name: string;
 	currentVersion: string;
 	group: DependencyGroup;
+	peerOptional?: boolean;
 }
 
 export interface ParsedPackageManifest {
