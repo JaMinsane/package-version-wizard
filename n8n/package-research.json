@@ -7,10 +7,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6240,
-        7168
+        8496,
+        9408
       ],
-      "id": "4a8198d1-3e8f-4248-9a44-c191aeaf94a4",
+      "id": "c93c7731-f8ec-4c8a-b427-e25b4d888cb9",
       "name": "Prepare package brief input"
     },
     {
@@ -53,10 +53,10 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        5264,
-        6720
+        7520,
+        8960
       ],
-      "id": "6e9be8db-ffa4-4b98-8018-5b47ebbbd4b3",
+      "id": "29387f56-73c4-481a-ad83-2e0b74745cb8",
       "name": "Execute Workflow Trigger"
     },
     {
@@ -66,10 +66,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5504,
-        6720
+        7760,
+        8960
       ],
-      "id": "f567ae19-0bb1-41de-8392-cbec744cbb91",
+      "id": "12f420b8-2ef2-4ad3-9303-224ddf5dd0ae",
       "name": "Normalize package context"
     },
     {
@@ -95,10 +95,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        5744,
-        6720
+        8000,
+        8960
       ],
-      "id": "a2f616af-e134-4e70-be9a-b90562683eda",
+      "id": "1aa85b64-c620-4ea5-a56d-01d27e2396b2",
       "name": "npm registry metadata"
     },
     {
@@ -115,10 +115,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        5968,
-        6720
+        8224,
+        8960
       ],
-      "id": "bde28eb7-8d83-4618-9cb9-476463dd1b54",
+      "id": "1d4fb6f3-6adb-4b5b-987a-e3260a0f90b3",
       "name": "IF GitHub repo?"
     },
     {
@@ -128,10 +128,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6448,
-        6704
+        8704,
+        8944
       ],
-      "id": "395ba042-7c85-4bec-86c0-b716f869e340",
+      "id": "e0bde758-03a8-45b7-b026-e5ba4ad2e635",
       "name": "Select documentation target"
     },
     {
@@ -148,10 +148,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        6656,
-        6704
+        8912,
+        8944
       ],
-      "id": "0c374cad-fe72-449c-83b9-d0320c9d8106",
+      "id": "a3923dfd-bb70-4d0a-9d63-d80360cc3b4c",
       "name": "IF documentation target?"
     },
     {
@@ -161,10 +161,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6176,
-        6928
+        8432,
+        9168
       ],
-      "id": "253f3f2a-04dd-43a0-b546-a2662f616744",
+      "id": "7f6d50ed-8d37-462f-8400-5b9d81306837",
       "name": "Build empty research envelope"
     },
     {
@@ -174,10 +174,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7344,
-        6720
+        9600,
+        8960
       ],
-      "id": "319bd230-a71f-4e67-b69c-834fcb019b55",
+      "id": "496faddf-556b-4847-9d97-61c65a7c260c",
       "name": "Build GitHub research envelope"
     },
     {
@@ -187,10 +187,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6496,
-        6928
+        8752,
+        9168
       ],
-      "id": "c02bbe8b-f62b-4eee-90ce-df11b8421a80",
+      "id": "cd903785-50ad-48bc-951d-ace18b5a86cd",
       "name": "Extract evidence window"
     },
     {
@@ -207,23 +207,23 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        5568,
-        7184
+        7824,
+        9424
       ],
-      "id": "8e5cbbce-504f-46e3-b17e-92846e5c14a4",
+      "id": "b7208a6f-c68a-4995-b186-6f095db2e3c2",
       "name": "IF canonical evidence enough?"
     },
     {
       "parameters": {
-        "jsCode": "const raw = $input.first().json;\nconst parsed = raw.output ?? raw;\n\nconst prep = $('Prepare package brief input').first().json;\nconst candidate = prep.deepCandidate;\nconst resolution = candidate?.resolution ?? {};\nconst declaredSpec = resolution.declaredSpec ?? candidate.currentVersion;\nconst wantedVersion = resolution.wantedVersion ?? candidate.currentVersion;\nconst latestVersion = resolution.latestVersion ?? candidate.latestVersion;\nconst requiresManualReview = Boolean(resolution.requiresManualReview);\n\nconst fallbackBrief = {\n  name: candidate.name,\n  summary:\n    prep.evidenceStatus === 'verified'\n      ? `Spec ${declaredSpec}. Wanted ${wantedVersion}; latest ${latestVersion}. Evidencia verificada disponible para revisar antes del merge.`\n      : prep.evidenceStatus === 'partial'\n        ? `Spec ${declaredSpec}. Wanted ${wantedVersion}; latest ${latestVersion}. Evidencia parcial; revisa fuentes oficiales antes de aplicar cambios sensibles.`\n        : `Spec ${declaredSpec}. Wanted ${wantedVersion}; latest ${latestVersion}. No hubo evidencia suficiente para afirmar breaking changes verificables.`,\n  breakingChanges: [],\n  testFocus: candidate.deprecated\n    ? [\n        'Validar rutas criticas que aun usan el paquete deprecated',\n        'Aislar impacto de la sustitucion o remocion'\n      ]\n    : requiresManualReview\n      ? [\n          'Verificar cómo se resuelve realmente el spec en instalación o lockfile',\n          'Confirmar compatibilidad manual antes de cambiar canal, alias o fuente'\n        ]\n      : [\n          'Smoke test del flujo principal afectado',\n          'Verificar build, imports y arranque del proyecto'\n        ],\n  riskLevel:\n    candidate.deprecated || candidate.diffType === 'major' || requiresManualReview\n      ? 'high'\n      : candidate.diffType === 'minor'\n        ? 'medium'\n        : 'low',\n  confidence:\n    prep.evidenceStatus === 'verified'\n      ? 'high'\n      : prep.evidenceStatus === 'partial'\n        ? 'medium'\n        : 'low',\n  evidenceStatus: prep.evidenceStatus ?? 'none',\n  recommendedActions: candidate.deprecated\n    ? [\n        'Planificar reemplazo o salida gradual',\n        'No expandir nuevas dependencias sobre este paquete'\n      ]\n    : requiresManualReview\n      ? [\n          'Tratar este paquete como manual review antes de proponer un upgrade automático',\n          'Revisar declaredSpec, wantedVersion y latestVersion antes de cambiar el comportamiento actual'\n        ]\n      : [\n          'Aplicar upgrade en rama corta',\n          'Validar test focus antes de mergear'\n        ],\n  sources: []\n};\n\nconst allowedSources = new Map();\nfor (const entry of prep.evidence ?? []) {\n  const url = String(entry?.url ?? '');\n  const label = String(entry?.label ?? '');\n  if (!url || !label) continue;\n  if (!allowedSources.has(url)) {\n    allowedSources.set(url, {\n      packageName: candidate.name,\n      label,\n      url\n    });\n  }\n}\n\nconst merged = { ...fallbackBrief, ...parsed };\n\nconst sources = [];\nconst seen = new Set();\n\nfor (const source of [\n  ...((merged.sources ?? []).filter(Boolean)),\n  ...((prep.evidence ?? []).map((entry) => ({\n    packageName: candidate.name,\n    label: entry.label,\n    url: entry.url\n  })))\n]) {\n  const url = String(source?.url ?? '');\n  const canonical = allowedSources.get(url);\n  if (!canonical) continue;\n\n  const key = `${canonical.packageName}|${canonical.label}|${canonical.url}`;\n  if (seen.has(key)) continue;\n\n  seen.add(key);\n  sources.push(canonical);\n}\n\nreturn [\n  {\n    json: {\n      packageBrief: {\n        ...merged,\n        name: candidate.name,\n        sources\n      }\n    }\n  }\n];\n"
+        "jsCode": "const raw = $input.first().json;\nconst parsed = raw.output ?? raw;\n\nconst prep = $('Prepare package brief input').first().json;\nconst candidate = prep.deepCandidate;\nconst resolution = candidate?.resolution ?? {};\nconst declaredSpec = resolution.declaredSpec ?? candidate.currentVersion;\nconst wantedVersion = resolution.wantedVersion ?? candidate.currentVersion;\nconst latestVersion = resolution.latestVersion ?? candidate.latestVersion;\nconst requiresManualReview = Boolean(resolution.requiresManualReview);\n\nconst sanitizeText = (value, maxLength = 420) => {\n  if (typeof value !== 'string') return '';\n  return value.replace(/\\s+/g, ' ').trim().slice(0, maxLength);\n};\n\nconst sanitizeList = (value, maxItems = 3, maxLength = 180) => {\n  if (!Array.isArray(value)) return [];\n  return value\n    .filter((entry) => typeof entry === 'string')\n    .map((entry) => entry.replace(/\\s+/g, ' ').trim())\n    .filter(Boolean)\n    .slice(0, maxItems)\n    .map((entry) => entry.slice(0, maxLength));\n};\n\nconst evidenceStatus = ['verified', 'partial', 'none'].includes(prep.evidenceStatus)\n  ? prep.evidenceStatus\n  : 'none';\n\nconst buildFallbackSummary = () => {\n  if (evidenceStatus === 'verified') {\n    return 'Spec ' + declaredSpec + '. Wanted ' + wantedVersion + '; latest ' + latestVersion + '. Evidencia verificada disponible para revisar antes del merge.';\n  }\n\n  if (evidenceStatus === 'partial') {\n    return 'Spec ' + declaredSpec + '. Wanted ' + wantedVersion + '; latest ' + latestVersion + '. Evidencia parcial; revisa fuentes oficiales antes de aplicar cambios sensibles.';\n  }\n\n  return 'Spec ' + declaredSpec + '. Wanted ' + wantedVersion + '; latest ' + latestVersion + '. No hubo evidencia suficiente para afirmar breaking changes verificables.';\n};\n\nconst fallbackEditorial = {\n  summary: buildFallbackSummary(),\n  breakingChanges: [],\n  testFocus: candidate.deprecated\n    ? [\n        'Validar rutas criticas que aun usan el paquete deprecated',\n        'Aislar impacto de la sustitucion o remocion'\n      ]\n    : requiresManualReview\n      ? [\n          'Verificar como se resuelve realmente el spec en instalacion o lockfile',\n          'Confirmar compatibilidad manual antes de cambiar canal, alias o fuente'\n        ]\n      : [\n          'Smoke test del flujo principal afectado',\n          'Verificar build, imports y arranque del proyecto'\n        ],\n  recommendedActions: candidate.deprecated\n    ? [\n        'Planificar reemplazo o salida gradual',\n        'No expandir nuevas dependencias sobre este paquete'\n      ]\n    : requiresManualReview\n      ? [\n          'Tratar este paquete como manual review antes de proponer un upgrade automatico',\n          'Revisar declaredSpec, wantedVersion y latestVersion antes de cambiar el comportamiento actual'\n        ]\n      : [\n          'Aplicar upgrade en una rama corta',\n          'Validar test focus antes de mergear'\n        ]\n};\n\nconst parsedObject = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};\n\nconst breakingChanges = (() => {\n  const list = sanitizeList(parsedObject.breakingChanges, 3, 180);\n  return list.length ? list : fallbackEditorial.breakingChanges;\n})();\n\nconst testFocus = (() => {\n  const list = sanitizeList(parsedObject.testFocus, 3, 180);\n  return list.length ? list : fallbackEditorial.testFocus;\n})();\n\nconst recommendedActions = (() => {\n  const list = sanitizeList(parsedObject.recommendedActions, 3, 180);\n  return list.length ? list : fallbackEditorial.recommendedActions;\n})();\n\nconst summary = sanitizeText(parsedObject.summary, 420) || fallbackEditorial.summary;\n\nconst riskLevel =\n  candidate.deprecated || candidate.diffType === 'major' || requiresManualReview\n    ? 'high'\n    : candidate.diffType === 'minor'\n      ? 'medium'\n      : 'low';\n\nconst confidence =\n  evidenceStatus === 'verified'\n    ? 'high'\n    : evidenceStatus === 'partial'\n      ? 'medium'\n      : 'low';\n\nconst sources = [];\nconst seen = new Set();\n\nfor (const entry of prep.evidence ?? []) {\n  const url = String(entry?.url ?? '').trim();\n  const label = String(entry?.label ?? '').trim();\n  if (!url || !label) continue;\n\n  const key = candidate.name + '|' + label + '|' + url;\n  if (seen.has(key)) continue;\n\n  seen.add(key);\n  sources.push({\n    packageName: candidate.name,\n    label,\n    url\n  });\n}\n\nreturn [\n  {\n    json: {\n      packageBrief: {\n        name: candidate.name,\n        summary,\n        breakingChanges,\n        testFocus,\n        riskLevel,\n        confidence,\n        evidenceStatus,\n        recommendedActions,\n        sources\n      }\n    }\n  }\n];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6848,
-        7152
+        9104,
+        9392
       ],
-      "id": "dcf7354a-a3de-4717-91ca-d0079dfc1fee",
+      "id": "1f3cc89d-6631-4f2a-a11b-dcc0b4588888",
       "name": "Build package brief"
     },
     {
@@ -233,21 +233,21 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7056,
-        7152
+        9312,
+        9392
       ],
-      "id": "7e51d97d-9041-4845-81e2-86e60a43fe25",
+      "id": "e57b36a0-a5ea-4113-a21c-ee3ffb753b05",
       "name": "Return data to parent"
     },
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Genera un brief por paquete usando únicamente la evidencia recibida.\n\nObjetivo:\n- summary: sintetiza el upgrade y el nivel de certeza\n- breakingChanges: enumera solo cambios verificables\n- testFocus: indica validaciones concretas\n- recommendedActions: propone siguientes pasos conservadores\n- sources: reutiliza únicamente las fuentes ya presentes en la evidencia\n\nReglas:\n- Devuelve solo un objeto JSON raíz; no uses ```json, no uses arrays, no envuelvas en output\n- No investigues fuera de la entrada.\n- No agregues fuentes nuevas.\n- name debe coincidir exactamente con candidate.name.\n- Usa candidate.resolution para distinguir declaredSpec, wantedVersion, latestVersion, deprecationStatus y requiresManualReview.\n- evidenceStatus debe reflejar el nivel recibido en la entrada.\n- Si evidenceStatus !== 'verified', no afirmes breaking changes salvo una deprecación oficial explícita.\n- Si requiresManualReview es true, dilo claramente y evita recomendar un upgrade automático como hecho consumado.\n- Si la evidencia es parcial o débil, dilo claramente en summary.\n- No repitas toda la evidencia; sintetiza.\n\nEntrada:\n{{ JSON.stringify({\n  candidate: $json.deepCandidate,\n  evidenceStatus: $json.evidenceStatus,\n  evidence: $json.evidence\n}, null, 2) }}\n",
+        "text": "=Genera un brief por paquete usando únicamente la evidencia recibida.\n\nObjetivo:\n- summary: sintetiza el upgrade y el nivel de certeza\n- breakingChanges: enumera solo cambios verificables\n- testFocus: indica validaciones concretas\n- recommendedActions: propone siguientes pasos conservadores\n\nReglas:\n- Devuelve solo un objeto JSON raíz; no uses ```json, no uses arrays como raíz, no envuelvas en output.\n- Devuelve exclusivamente summary, breakingChanges, testFocus y recommendedActions.\n- No incluyas name, riskLevel, confidence, evidenceStatus ni sources; esos campos los calcula el workflow.\n- summary: máximo 2 frases.\n- breakingChanges: máximo 3 items.\n- testFocus: máximo 3 items.\n- recommendedActions: máximo 3 items.\n- No investigues fuera de la entrada.\n- No agregues fuentes nuevas.\n- Usa candidate.resolution para distinguir declaredSpec, wantedVersion, latestVersion, deprecationStatus y requiresManualReview.\n- Si evidenceStatus !== 'verified', no afirmes breaking changes salvo una deprecación oficial explícita.\n- Si requiresManualReview es true, dilo claramente y evita recomendar un upgrade automático como hecho consumado.\n- Si la evidencia es parcial o débil, dilo claramente en summary.\n- No repitas toda la evidencia; sintetiza.\n\nEntrada:\n{{ JSON.stringify({\n  candidate: $json.deepCandidate,\n  evidenceStatus: $json.evidenceStatus,\n  evidence: $json.evidence\n}, null, 2) }}\n",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
             {
-              "message": "Eres un analista senior de upgrades npm.\nDevuelve exclusivamente datos que cumplan el schema del output parser.\nTodo el texto orientado al usuario debe estar en español técnico natural y ser claro para developers.\n\nRol:\n- Actúa como extractor estricto de evidencia, no como asesor creativo.\n- Resume únicamente lo sustentado por candidate, evidenceStatus y evidence.\n- Usa esta precedencia de evidencia al resolver conflictos: deprecation notice > migration guide > changelog > github-release > docs/readme.\n\nCampos fijos:\n- name debe coincidir exactamente con candidate.name.\n- evidenceStatus debe reflejar el nivel recibido en la entrada.\n\nReglas de precisión:\n- No inventes breaking changes, riesgos, acciones ni fuentes.\n- breakingChanges solo puede incluir cambios sustentados por evidencia verificable.\n- Si evidenceStatus no es verified, breakingChanges debe quedar vacío salvo una deprecación oficial explícita.\n- Usa candidate.resolution.declaredSpec, wantedVersion y latestVersion para separar el spec declarado del target resoluble.\n- Si candidate.resolution.requiresManualReview es true, exprésalo explícitamente y evita afirmar que el upgrade es directo o automático.\n- docs o README solo sirven como contexto secundario; no los uses como breaking change verificado.\n- sources debe usar únicamente URLs presentes en la evidencia de entrada.\n\nReglas de inferencia:\n- Puedes inferir riskLevel, confidence y recommendedActions de forma conservadora usando semver, deprecation, requiresManualReview y evidenceStatus.\n- Si hay incertidumbre, exprésala explícitamente en summary y evita lenguaje tajante.\n\nReglas de estilo:\n- summary debe ser breve, técnico y accionable.\n- testFocus y recommendedActions deben ser concretos y útiles para un equipo técnico.\n"
+              "message": "Eres un analista senior de upgrades npm.\nDevuelve exclusivamente datos que cumplan el schema del output parser.\nTodo el texto orientado al usuario debe estar en español técnico natural y ser claro para developers.\n\nRol:\n- Actúa como extractor estricto de evidencia, no como asesor creativo.\n- Resume únicamente lo sustentado por candidate, evidenceStatus y evidence.\n- Usa esta precedencia de evidencia al resolver conflictos: deprecation notice > migration guide > changelog > github-release > docs/readme.\n\nSalida permitida:\n- Devuelve solo summary, breakingChanges, testFocus y recommendedActions.\n- Nunca devuelvas name, riskLevel, confidence, evidenceStatus ni sources.\n\nReglas de precisión:\n- No inventes breaking changes, acciones ni fuentes.\n- breakingChanges solo puede incluir cambios sustentados por evidencia verificable.\n- Si evidenceStatus no es verified, breakingChanges debe quedar vacío salvo una deprecación oficial explícita.\n- Usa candidate.resolution.declaredSpec, wantedVersion y latestVersion para separar el spec declarado del target resoluble.\n- Si candidate.resolution.requiresManualReview es true, exprésalo explícitamente y evita afirmar que el upgrade es directo o automático.\n- docs o README solo sirven como contexto secundario; no los uses como breaking change verificado.\n- No asumas un gestor de paquetes específico ni propongas comandos concretos de instalación.\n\nReglas de estilo:\n- summary debe ser breve, técnico y accionable, con máximo 2 frases.\n- breakingChanges debe tener máximo 3 items.\n- testFocus debe tener máximo 3 items.\n- recommendedActions debe tener máximo 3 items.\n- testFocus y recommendedActions deben ser concretos y útiles para un equipo técnico.\n- Si hay incertidumbre, exprésala explícitamente en summary y evita lenguaje tajante.\n"
             }
           ]
         },
@@ -256,10 +256,10 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.9,
       "position": [
-        6448,
-        7168
+        8704,
+        9408
       ],
-      "id": "218a1a3c-1fc1-4f21-92a1-e2a740e08921",
+      "id": "7df7ae62-6218-4d05-9bee-0ac66c4eddbb",
       "name": "Basic LLM Chain",
       "onError": "continueErrorOutput"
     },
@@ -274,10 +274,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
       "position": [
-        6416,
-        7344
+        8624,
+        9648
       ],
-      "id": "568f9959-fbe4-4235-8a85-0f12116fb2a7",
+      "id": "75bd6f89-c889-4785-8a41-1e57291c81c2",
       "name": "Groq Chat Model",
       "credentials": {
         "groqApi": {
@@ -289,15 +289,18 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"name\": { \"type\": \"string\" },\n    \"summary\": { \"type\": \"string\" },\n    \"breakingChanges\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    },\n    \"testFocus\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    },\n    \"riskLevel\": {\n      \"type\": \"string\",\n      \"enum\": [\"low\", \"medium\", \"high\"]\n    },\n    \"confidence\": {\n      \"type\": \"string\",\n      \"enum\": [\"low\", \"medium\", \"high\"]\n    },\n    \"evidenceStatus\": {\n      \"type\": \"string\",\n      \"enum\": [\"verified\", \"partial\", \"none\"]\n    },\n    \"recommendedActions\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    },\n    \"sources\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"properties\": {\n          \"packageName\": { \"type\": \"string\" },\n          \"label\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"npm\",\n              \"github-release\",\n              \"changelog\",\n              \"migration-guide\",\n              \"docs\",\n              \"fallback-search\",\n              \"repository\"\n            ]\n          },\n          \"url\": { \"type\": \"string\" }\n        },\n        \"required\": [\"packageName\", \"label\", \"url\"]\n      }\n    }\n  },\n  \"required\": [\n    \"name\",\n    \"summary\",\n    \"breakingChanges\",\n    \"testFocus\",\n    \"riskLevel\",\n    \"confidence\",\n    \"evidenceStatus\",\n    \"recommendedActions\",\n    \"sources\"\n  ]\n}\n"
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"summary\": {\n      \"type\": \"string\"\n    },\n    \"breakingChanges\": {\n      \"type\": \"array\",\n      \"maxItems\": 3,\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"testFocus\": {\n      \"type\": \"array\",\n      \"maxItems\": 3,\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"recommendedActions\": {\n      \"type\": \"array\",\n      \"maxItems\": 3,\n      \"items\": {\n        \"type\": \"string\"\n      }\n    }\n  },\n  \"required\": [\n    \"summary\",\n    \"breakingChanges\",\n    \"testFocus\",\n    \"recommendedActions\"\n  ]\n}\n",
+        "autoFix": true,
+        "customizeRetryPrompt": true,
+        "prompt": "Instructions:\n--------------\n{instructions}\n--------------\nCompletion:\n--------------\n{completion}\n--------------\n\nAbove, the Completion did not satisfy the constraints given in the Instructions.\nError:\n--------------\n{error}\n--------------\n\nTu única tarea es reparar el formato y la estructura para que cumpla exactamente el JSON Schema indicado en Instructions.\n\nReglas obligatorias:\n- Conserva el mismo idioma del texto original.\n- No traduzcas contenido ya presente.\n- No agregues nuevas afirmaciones, no agregues nuevas fuentes ni nuevos paquetes.\n- No reconstruyas campos que no formen parte del schema.\n- Si existe un wrapper `output`, elimínalo y devuelve su contenido como objeto raíz.\n- Si hay bloques ```json o ``` , elimínalos.\n- Si el contenido original está incompleto o truncado, conserva solo lo recuperable y usa arrays vacíos o texto conservador en lugar de inventar.\n- Mantén los valores originales siempre que ya sean válidos para el schema.\n- Devuelve solo un objeto JSON raíz válido. No uses markdown.\n"
       },
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        6624,
-        7344
+        8768,
+        9584
       ],
-      "id": "4e30fa84-be72-47a3-b5c5-066985a53008",
+      "id": "6d89adbb-df24-42ce-b69b-9584468deb05",
       "name": "Structured Output Parser"
     },
     {
@@ -315,10 +318,10 @@
       "type": "@tavily/n8n-nodes-tavily.tavily",
       "typeVersion": 1,
       "position": [
-        5728,
-        7328
+        7984,
+        9568
       ],
-      "id": "68f982bb-da0a-4710-94a4-97e65e4810f8",
+      "id": "c6e8b8e8-0d1e-4bed-9272-5480b1282e0a",
       "name": "Tavily Search",
       "credentials": {
         "tavilyApi": {
@@ -344,10 +347,10 @@
       "type": "@tavily/n8n-nodes-tavily.tavily",
       "typeVersion": 1,
       "position": [
-        5904,
-        7232
+        8160,
+        9472
       ],
-      "id": "f627fa18-d46e-427b-ac4e-3824de821496",
+      "id": "1ee24afe-3812-41f4-9c25-6bd1d3246ad1",
       "name": "Tavily Extract",
       "credentials": {
         "tavilyApi": {
@@ -376,10 +379,10 @@
       "type": "n8n-nodes-base.github",
       "typeVersion": 1.1,
       "position": [
-        7104,
-        6720
+        9360,
+        8960
       ],
-      "id": "1f3aedcb-09db-440e-9548-370d43cd5d02",
+      "id": "b3d118bf-aef7-4ae9-9226-b954d0e64ee8",
       "name": "GitHub releases",
       "webhookId": "cc57291a-1244-4952-80cb-f1d29dc0714c",
       "alwaysOutputData": true,
@@ -408,10 +411,10 @@
       "type": "n8n-nodes-base.github",
       "typeVersion": 1.1,
       "position": [
-        6224,
-        6704
+        8480,
+        8944
       ],
-      "id": "76ef0684-5d0a-4563-b77b-51dcf27ac159",
+      "id": "19da8cd3-fc99-46db-893e-508cd5c8092a",
       "name": "GitHub contents index",
       "webhookId": "5bfe547b-3f80-453a-a397-6b4ccf1e6379",
       "credentials": {
@@ -442,10 +445,10 @@
       "type": "n8n-nodes-base.github",
       "typeVersion": 1.1,
       "position": [
-        6864,
-        6592
+        9120,
+        8832
       ],
-      "id": "4dd789fe-3e9d-4dd7-a4f4-6e15d20c4971",
+      "id": "d2fddfca-ae45-4de0-abae-5dbabf20148b",
       "name": "GitHub documentation raw",
       "webhookId": "8f8d3ebd-485f-4b02-a353-f97103496c0e",
       "credentials": {
@@ -633,6 +636,11 @@
         [
           {
             "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser",
             "type": "ai_languageModel",
             "index": 0
           }
