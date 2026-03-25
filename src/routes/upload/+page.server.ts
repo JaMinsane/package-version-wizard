@@ -6,7 +6,11 @@ import { startUploadedAnalysis } from '$lib/server/analysis/service';
 import type { SlackFrequency } from '$lib/server/analysis/types';
 import { parseUploadedPackageJson } from '$lib/server/package-json/manifest';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
+	if (!locals.user) {
+		throw redirect(303, '/login');
+	}
+
 	const appBaseUrl = privateEnv.APP_BASE_URL || privateEnv.PUBLIC_APP_URL;
 
 	return {

@@ -1,5 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { enhance } from '$app/forms';
+
+	interface Props {
+		user?: { id: string; name: string; email: string } | null;
+	}
+
+	let { user = null }: Props = $props();
 
 	const navLinks = [
 		{ href: '/', label: 'home', command: '$ cd' },
@@ -33,18 +40,39 @@
 					<span class="text-[var(--text-muted)]">{link.label}</span>
 				</a>
 			{/each}
+
+			{#if user}
+				<a
+					href="/upload"
+					class="nav-link"
+					class:nav-link--active={$page.url.pathname === '/upload'}
+				>
+					<span class="text-[var(--neon-green)]">$ run</span>
+					<span class="text-[var(--text-muted)]">/analyze</span>
+				</a>
+			{/if}
 		</div>
 
-		<!-- Right: CTA -->
+		<!-- Right: Auth -->
 		<div class="flex items-center gap-2.5">
-			<a
-				href="/upload"
-				class="nav-cta"
-			>
-				<span class="text-[var(--neon-green)]">$</span>
-				Iniciar sesión
-				<span class="text-[var(--neon-green)]">→</span>
-			</a>
+			{#if user}
+				<span class="hidden items-center gap-1.5 text-xs text-[var(--text-muted)] sm:flex">
+					<span class="text-[var(--neon-green)]">●</span>
+					{user.name}
+				</span>
+				<form method="POST" action="/logout" use:enhance>
+					<button type="submit" class="nav-cta nav-cta--muted">
+						<span class="text-[var(--neon-red)]">$</span>
+						logout
+					</button>
+				</form>
+			{:else}
+				<a href="/login" class="nav-cta">
+					<span class="text-[var(--neon-green)]">$</span>
+					Iniciar sesión
+					<span class="text-[var(--neon-green)]">→</span>
+				</a>
+			{/if}
 		</div>
 	</nav>
 </header>
@@ -102,5 +130,17 @@
 
 	.nav-cta:active {
 		transform: scale(0.95);
+	}
+
+	.nav-cta--muted {
+		border-color: rgba(255, 85, 85, 0.3);
+		color: var(--text-muted);
+		background: rgba(255, 85, 85, 0.04);
+	}
+
+	.nav-cta--muted:hover {
+		background: rgba(255, 85, 85, 0.1);
+		color: var(--neon-red);
+		box-shadow: 0 0 12px rgba(255, 85, 85, 0.15);
 	}
 </style>

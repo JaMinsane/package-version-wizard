@@ -3,7 +3,9 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 
-	let { children } = $props();
+	import type { LayoutData } from './$types';
+
+	let { data, children }: { data: LayoutData; children: any } = $props();
 </script>
 
 <svelte:head>
@@ -15,5 +17,5 @@
 		rel="stylesheet"
 	/>
 </svelte:head>
-<Navbar />
+<Navbar user={data.user} />
 {@render children()}
