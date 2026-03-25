@@ -4,6 +4,7 @@
 	import type { ActionData, PageData } from './$types';
 	import type {
 		ConfidenceLevel,
+		DependencyComparisonStatus,
 		EvidenceStatus,
 		PackageBrief,
 		RiskLevel,
@@ -49,6 +50,9 @@
 		completed: 'El brief final ya volvió, fue saneado y quedó disponible en esta URL.',
 		failed: 'El flujo terminó con error. Revisa el panel técnico y vuelve a intentar si hace falta.'
 	} as const;
+
+	type AnalysisDependency = PageData['analysis']['dependencies'][number];
+	type DependencyDisplayStatus = 'outdated' | 'covered_by_range' | 'up_to_date' | 'manual_review';
 
 	$effect(() => {
 		if (
@@ -128,7 +132,12 @@
 	const deprecatedDependencies = $derived(
 		activeAnalysis.dependencies.filter((dependency) => dependency.deprecated).length
 	);
-	const criticalDependencies = $derived(activeAnalysis.dependencies.slice(0, 8));
+	const criticalDependencies = $derived(
+		activeAnalysis.dependencies.filter((dependency) => !isCoveredBySpec(dependency)).slice(0, 8)
+	);
+	const coveredBySpecDependencies = $derived(
+		activeAnalysis.dependencies.filter((dependency) => isCoveredBySpec(dependency)).slice(0, 8)
+	);
 
 	function formatTimestamp(value?: string) {
 		if (!value) return 'Pendiente';
@@ -158,13 +167,103 @@
 		}[decision];
 	}
 
-	function getDiffTone(diffType: (typeof activeAnalysis.dependencies)[number]['diffType']) {
+	function getComparisonStatus(
+		dependency: AnalysisDependency
+	): DependencyComparisonStatus {
+		return dependency.resolution?.comparisonStatus ?? 'unresolved';
+	}
+
+	function getDeclaredSpec(dependency: AnalysisDependency) {
+		return dependency.resolution?.declaredSpec ?? dependency.currentVersion;
+	}
+
+	function getWantedVersion(dependency: AnalysisDependency) {
+		return dependency.resolution?.wantedVersion ?? dependency.currentVersion;
+	}
+
+	function getLatestVersion(dependency: AnalysisDependency) {
+		return dependency.resolution?.latestVersion ?? dependency.latestVersion;
+	}
+
+	function getDependencyDisplayStatus(dependency: AnalysisDependency): DependencyDisplayStatus {
+		const comparisonStatus = getComparisonStatus(dependency);
+
+		if (comparisonStatus === 'up_to_date') {
+			return getDeclaredSpec(dependency) !== getWantedVersion(dependency)
+				? 'covered_by_range'
+				: 'up_to_date';
+		}
+
+		if (comparisonStatus === 'outdated') {
+			return 'outdated';
+		}
+
+		return 'manual_review';
+	}
+
+	function isCoveredBySpec(dependency: AnalysisDependency) {
+		const status = getDependencyDisplayStatus(dependency);
+		return status === 'covered_by_range' || status === 'up_to_date';
+	}
+
+	function getDependencyStatusTone(status: DependencyDisplayStatus) {
 		return {
-			major: 'bg-rose-100 text-rose-900',
-			minor: 'bg-amber-100 text-amber-900',
-			patch: 'bg-emerald-100 text-emerald-900',
-			unknown: 'bg-slate-100 text-slate-700'
-		}[diffType];
+			outdated: 'bg-rose-100 text-rose-900',
+			covered_by_range: 'bg-cyan-100 text-cyan-900',
+			up_to_date: 'bg-emerald-100 text-emerald-900',
+			manual_review: 'bg-slate-100 text-slate-700'
+		}[status];
+	}
+
+	function getDependencyStatusLabel(dependency: AnalysisDependency) {
+		const displayStatus = getDependencyDisplayStatus(dependency);
+
+		if (displayStatus === 'covered_by_range') {
+			return 'covered by range';
+		}
+
+		if (displayStatus === 'up_to_date') {
+			return 'up to date';
+		}
+
+		if (displayStatus === 'outdated') {
+			return 'requiere cambio';
+		}
+
+		return {
+			channel_pinned: 'channel pinned',
+			manual_review: 'manual review',
+			unresolved: 'review needed',
+			unsupported: 'custom spec',
+			up_to_date: 'up to date',
+			outdated: 'requiere cambio'
+		}[getComparisonStatus(dependency)];
+	}
+
+	function formatDependencyVersionLine(dependency: AnalysisDependency) {
+		const declaredSpec = getDeclaredSpec(dependency);
+		const wantedVersion = getWantedVersion(dependency);
+		const latestVersion = getLatestVersion(dependency);
+		const comparisonStatus = getComparisonStatus(dependency);
+		const displayStatus = getDependencyDisplayStatus(dependency);
+
+		if (comparisonStatus === 'outdated') {
+			return `Spec ${declaredSpec} -> latest ${latestVersion}`;
+		}
+
+		if (displayStatus === 'covered_by_range') {
+			return `Spec ${declaredSpec} · resuelve a ${wantedVersion} · latest ${latestVersion}`;
+		}
+
+		if (displayStatus === 'up_to_date') {
+			return `Spec ${declaredSpec} · latest ${latestVersion}`;
+		}
+
+		if (comparisonStatus === 'channel_pinned') {
+			return `Spec ${declaredSpec} · canal fijado · latest estable ${latestVersion}`;
+		}
+
+		return `Spec ${declaredSpec} · requiere revisión manual`;
 	}
 
 	function getRiskLevelTone(riskLevel?: RiskLevel) {
@@ -514,65 +613,130 @@
 					<h2 class="mt-2 text-2xl font-bold text-slate-950">Lo primero que miraría un equipo</h2>
 
 					<div class="mt-6 grid gap-4 xl:grid-cols-2">
-						{#each criticalDependencies as dependency}
-							<article class="rounded-3xl border border-slate-200 bg-white p-5">
-								<div class="flex items-start justify-between gap-3">
-									<div>
-										<h3 class="text-lg font-semibold text-slate-950">{dependency.name}</h3>
-										<p class="mt-2 text-sm text-slate-500">
-											{dependency.currentVersion} → {dependency.latestVersion}
-										</p>
+						{#if criticalDependencies.length}
+							{#each criticalDependencies as dependency}
+								<article class="rounded-3xl border border-slate-200 bg-white p-5">
+									<div class="flex items-start justify-between gap-3">
+										<div>
+											<h3 class="text-lg font-semibold text-slate-950">{dependency.name}</h3>
+											<p class="mt-2 text-sm text-slate-500">
+												{formatDependencyVersionLine(dependency)}
+											</p>
+										</div>
+										<div class="flex flex-wrap justify-end gap-2">
+											<span class={`rounded-full px-3 py-1 text-xs font-semibold ${getDependencyStatusTone(getDependencyDisplayStatus(dependency))}`}>
+												{getDependencyStatusLabel(dependency)}
+											</span>
+											<span class={`rounded-full px-3 py-1 text-xs font-semibold ${getDecisionTone(dependency.decision)}`}>
+												{dependency.decision}
+											</span>
+										</div>
 									</div>
-									<div class="flex flex-wrap justify-end gap-2">
-										<span class={`rounded-full px-3 py-1 text-xs font-semibold ${getDiffTone(dependency.diffType)}`}>
-											{dependency.diffType}
-										</span>
-										<span class={`rounded-full px-3 py-1 text-xs font-semibold ${getDecisionTone(dependency.decision)}`}>
-											{dependency.decision}
-										</span>
-									</div>
-								</div>
 
-								<div class="mt-4 grid gap-3 sm:grid-cols-2">
-									<div class="rounded-2xl bg-slate-50 px-4 py-3">
-										<p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Grupo</p>
-										<p class="mt-1 text-sm font-medium text-slate-900">{dependency.group}</p>
+									<div class="mt-4 grid gap-3 sm:grid-cols-2">
+										<div class="rounded-2xl bg-slate-50 px-4 py-3">
+											<p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Grupo</p>
+											<p class="mt-1 text-sm font-medium text-slate-900">{dependency.group}</p>
+										</div>
+										<div class="rounded-2xl bg-slate-50 px-4 py-3">
+											<p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Risk score</p>
+											<p class="mt-1 text-sm font-medium text-slate-900">{dependency.riskScore}/100</p>
+										</div>
 									</div>
-									<div class="rounded-2xl bg-slate-50 px-4 py-3">
-										<p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Risk score</p>
-										<p class="mt-1 text-sm font-medium text-slate-900">{dependency.riskScore}/100</p>
-									</div>
-								</div>
 
-								{#if dependency.deprecated}
-									<div class="mt-4 rounded-2xl border border-fuchsia-200 bg-fuchsia-50 px-4 py-3 text-sm text-fuchsia-950">
-										Este paquete aparece como deprecated y merece atención prioritaria.
-									</div>
-								{/if}
+									{#if dependency.deprecated}
+										<div class="mt-4 rounded-2xl border border-fuchsia-200 bg-fuchsia-50 px-4 py-3 text-sm text-fuchsia-950">
+											Este paquete aparece como deprecated y merece atención prioritaria.
+										</div>
+									{/if}
 
-								{#if dependency.sourceUrls.length}
-									<div class="mt-4 flex flex-wrap gap-2">
-										{#each dependency.sourceUrls as url}
-											<a
-												href={url}
-												target="_blank"
-												rel="noreferrer"
-												class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-200"
-											>
-												fuente
-											</a>
-										{/each}
-									</div>
-								{/if}
-							</article>
-						{/each}
+									{#if dependency.sourceUrls.length}
+										<div class="mt-4 flex flex-wrap gap-2">
+											{#each dependency.sourceUrls as url}
+												<a
+													href={url}
+													target="_blank"
+													rel="noreferrer"
+													class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-200"
+												>
+													fuente
+												</a>
+											{/each}
+										</div>
+									{/if}
+								</article>
+							{/each}
+						{:else}
+							<div class="rounded-3xl border border-dashed border-cyan-200 bg-cyan-50/80 p-5 text-sm text-cyan-950 xl:col-span-2">
+								No hay dependencias que requieran cambio real en el manifiesto o revisión manual prioritaria.
+							</div>
+						{/if}
 					</div>
 				</div>
+
+				{#if coveredBySpecDependencies.length}
+					<div class="rounded-[2rem] border border-slate-200/80 bg-white/85 p-6 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur">
+						<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Specs alineados</p>
+						<h2 class="mt-2 text-2xl font-bold text-slate-950">Ya cubiertas por el manifiesto</h2>
+						<p class="mt-3 text-sm leading-7 text-slate-600">
+							Estas dependencias ya están cubiertas por el spec declarado o alineadas con la latest del registry. No requieren cambio inmediato en `package.json`.
+						</p>
+
+						<div class="mt-6 grid gap-4 xl:grid-cols-2">
+							{#each coveredBySpecDependencies as dependency}
+								<article class="rounded-3xl border border-slate-200 bg-white p-5">
+									<div class="flex items-start justify-between gap-3">
+										<div>
+											<h3 class="text-lg font-semibold text-slate-950">{dependency.name}</h3>
+											<p class="mt-2 text-sm text-slate-500">
+												{formatDependencyVersionLine(dependency)}
+											</p>
+										</div>
+										<div class="flex flex-wrap justify-end gap-2">
+											<span class={`rounded-full px-3 py-1 text-xs font-semibold ${getDependencyStatusTone(getDependencyDisplayStatus(dependency))}`}>
+												{getDependencyStatusLabel(dependency)}
+											</span>
+											<span class={`rounded-full px-3 py-1 text-xs font-semibold ${getDecisionTone(dependency.decision)}`}>
+												{dependency.decision}
+											</span>
+										</div>
+									</div>
+
+									<div class="mt-4 grid gap-3 sm:grid-cols-2">
+										<div class="rounded-2xl bg-slate-50 px-4 py-3">
+											<p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Grupo</p>
+											<p class="mt-1 text-sm font-medium text-slate-900">{dependency.group}</p>
+										</div>
+										<div class="rounded-2xl bg-slate-50 px-4 py-3">
+											<p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Risk score</p>
+											<p class="mt-1 text-sm font-medium text-slate-900">{dependency.riskScore}/100</p>
+										</div>
+									</div>
+
+									{#if dependency.sourceUrls.length}
+										<div class="mt-4 flex flex-wrap gap-2">
+											{#each dependency.sourceUrls as url}
+												<a
+													href={url}
+													target="_blank"
+													rel="noreferrer"
+													class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-200"
+												>
+													fuente
+												</a>
+											{/each}
+										</div>
+									{/if}
+								</article>
+							{/each}
+						</div>
+					</div>
+				{/if}
 
 				{#if activeAnalysis.callbackPayload?.packageBriefs.length}
 					<div class="rounded-[2rem] border border-slate-200/80 bg-white/85 p-6 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur">
 						<p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Paquetes explicados</p>
-						<h2 class="mt-2 text-2xl font-bold text-slate-950">Dónde mirar con más cuidado</h2>
+						<h2 class="mt-2 text-2xl font-bold text-slate-950">Contexto por paquete</h2>
 
 						<div class="mt-6 grid gap-4 xl:grid-cols-2">
 							{#each activeAnalysis.callbackPayload.packageBriefs as brief}
