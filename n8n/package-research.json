@@ -1,0 +1,728 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const readResults = (nodeRef) => {\n  try {\n    const firstJson = nodeRef.first()?.json ?? null;\n\n    if (Array.isArray(firstJson?.results)) {\n      return firstJson.results;\n    }\n\n    return nodeRef\n      .all()\n      .map((item) => item.json)\n      .filter((entry) => entry && typeof entry === 'object');\n  } catch (error) {\n    return [];\n  }\n};;\n\nconst base = $('Extract evidence window').first().json;\nconst fallbackResults = readResults($('Tavily Search'));\nconst extracts = readResults($('Tavily Extract'));\nconst candidate = base.deepCandidate ?? null;\n\nconst PRIORITY = {\n  npm: 5,\n  'migration-guide': 4,\n  changelog: 4,\n  'github-release': 4,\n  'fallback-search': 3,\n  docs: 2,\n  repository: 1\n};\n\nconst MAX_EXCERPT_LENGTH = {\n  npm: 220,\n  'migration-guide': 700,\n  changelog: 700,\n  'github-release': 700,\n  'fallback-search': 320,\n  docs: 280,\n  repository: 240\n};\n\nfunction cleanText(value) {\n  return String(value ?? '')\n    .replace(/\\r/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nfunction normalizeLabel(value) {\n  const label = cleanText(value);\n  return label === 'repo' ? 'repository' : label;\n}\n\nfunction normalizeTitle(value, fallback) {\n  const title = cleanText(value);\n  return title || fallback || 'source';\n}\n\nfunction normalizeUrl(value) {\n  return cleanText(value);\n}\n\nfunction buildCandidateMetadata(entry) {\n  return {\n    name: String(entry?.name ?? ''),\n    currentVersion: String(entry?.currentVersion ?? ''),\n    latestVersion: String(entry?.latestVersion ?? ''),\n    group: String(entry?.group ?? ''),\n    diffType: String(entry?.diffType ?? 'unknown'),\n    deprecated: Boolean(entry?.deprecated),\n    publishedAt: entry?.publishedAt ?? null,\n    resolution: entry?.resolution ?? null\n  };\n}\n\nfunction buildFallbackMetadata() {\n  return {\n    candidate: buildCandidateMetadata(candidate),\n    evidenceStatus: 'none',\n    evidence: []\n  };\n}\n\nfunction summarizeRenovateDiff(excerpt) {\n  const text = cleanText(excerpt);\n  const fileMatches = [...text.matchAll(/\\b([A-Za-z0-9._/-]+\\.(?:d\\.ts|ts|tsx|js|jsx|json|md))\\b/g)];\n  const files = [...new Set(fileMatches.map((match) => match[1]))].slice(0, 6);\n\n  const hints = [];\n  if (/index\\.d\\.ts/i.test(text)) hints.push('index.d.ts changed');\n  if (/package\\.json/i.test(text)) hints.push('package.json changed');\n  if (/readme\\.md/i.test(text)) hints.push('README.md changed');\n\n  const parts = [];\n  if (files.length) {\n    parts.push(`Files changed: ${files.join(', ')}`);\n  }\n  if (hints.length) {\n    parts.push(hints.join('; '));\n  }\n\n  return parts.join('. ') || text.slice(0, 320);\n}\n\nfunction isLowSignalEvidence(entry) {\n  const excerpt = entry.excerpt.toLowerCase();\n  const title = entry.title.toLowerCase();\n\n  if (!excerpt) {\n    return true;\n  }\n\n  if (\n    entry.label === 'docs' &&\n    (\n      excerpt.includes('the repository for high quality typescript type definitions') ||\n      excerpt.includes('you can also read this readme in') ||\n      excerpt.includes('justification for new definitions') ||\n      excerpt.includes('make-work prs') ||\n      title === 'readme.md'\n    )\n  ) {\n    return true;\n  }\n\n  if (\n    entry.label === 'fallback-search' &&\n    /terms of service|privacy policy|by logging in|big news!|gitlab|bitbucket|login\\?/.test(excerpt)\n  ) {\n    return true;\n  }\n\n  return false;\n}\n\nfunction isVerifiedSource(entry) {\n  if (entry.label === 'npm' && entry.title === 'deprecation notice') {\n    return true;\n  }\n\n  if (!['github-release', 'changelog', 'migration-guide'].includes(entry.label)) {\n    return false;\n  }\n\n  return entry.excerpt.length >= 80;\n}\n\nfunction normalizeEvidence(entry) {\n  const label = normalizeLabel(entry.label);\n  const url = normalizeUrl(entry.url);\n\n  if (!label || !url) {\n    return null;\n  }\n\n  let excerpt = cleanText(entry.excerpt);\n  if (!excerpt) {\n    return null;\n  }\n\n  if (label === 'fallback-search' && /app\\.renovatebot\\.com\\/package-diff/i.test(url)) {\n    excerpt = summarizeRenovateDiff(excerpt);\n  }\n\n  const normalized = {\n    label,\n    url,\n    title: normalizeTitle(entry.title, label),\n    excerpt: excerpt.slice(0, MAX_EXCERPT_LENGTH[label] ?? 400)\n  };\n\n  if (isLowSignalEvidence(normalized)) {\n    return null;\n  }\n\n  return normalized;\n}\n\nif (!candidate) {\n  const llmBriefInput = buildFallbackMetadata();\n\n  return [\n    {\n      json: {\n        ...base,\n        evidence: [],\n        evidenceStatus: 'none',\n        llmBriefInput\n      }\n    }\n  ];\n}\n\nconst rawEvidence = [];\nconst seenRaw = new Set();\n\nfunction pushRaw(entry) {\n  const label = normalizeLabel(entry.label);\n  const url = normalizeUrl(entry.url);\n\n  if (!label || !url) {\n    return;\n  }\n\n  const key = `${label}|${url}`;\n  if (seenRaw.has(key)) {\n    return;\n  }\n\n  seenRaw.add(key);\n  rawEvidence.push({\n    label,\n    url,\n    title: entry.title,\n    excerpt: entry.excerpt\n  });\n}\n\nfor (const source of base.canonicalEvidence ?? []) {\n  pushRaw(source);\n}\n\nfor (const extract of extracts.slice(0, 2)) {\n  const url = extract.url ?? extract.metadata?.url ?? null;\n\n  pushRaw({\n    label: 'fallback-search',\n    url,\n    title: extract.title ?? 'fallback source',\n    excerpt: extract.raw_content ?? extract.content ?? ''\n  });\n}\n\nfor (const result of fallbackResults.slice(0, 2)) {\n  pushRaw({\n    label: 'fallback-search',\n    url: result.url ?? null,\n    title: result.title ?? 'fallback search result',\n    excerpt: result.content ?? ''\n  });\n}\n\nconst evidence = rawEvidence\n  .map(normalizeEvidence)\n  .filter(Boolean)\n  .sort((left, right) => {\n    const byPriority = (PRIORITY[right.label] ?? 0) - (PRIORITY[left.label] ?? 0);\n    if (byPriority !== 0) {\n      return byPriority;\n    }\n\n    return left.url.localeCompare(right.url);\n  })\n  .slice(0, 4);\n\nconst evidenceStatus = evidence.some(isVerifiedSource)\n  ? 'verified'\n  : evidence.length\n    ? 'partial'\n    : 'none';\n\nconst llmBriefInput = {\n  candidate: buildCandidateMetadata(candidate),\n  evidenceStatus,\n  evidence: evidence.map(({ label, url, title, excerpt }) => ({\n    label,\n    url,\n    title,\n    excerpt\n  }))\n};\n\nreturn [\n  {\n    json: {\n      ...base,\n      evidence,\n      evidenceStatus,\n      llmBriefInput\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6240,
+        7168
+      ],
+      "id": "4a8198d1-3e8f-4248-9a44-c191aeaf94a4",
+      "name": "Prepare package brief input"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "analysisId"
+            },
+            {
+              "name": "projectName"
+            },
+            {
+              "name": "dependencyStats",
+              "type": "any"
+            },
+            {
+              "name": "allCandidates",
+              "type": "any"
+            },
+            {
+              "name": "deepCandidate",
+              "type": "any"
+            },
+            {
+              "name": "candidatePosition",
+              "type": "number"
+            },
+            {
+              "name": "totalDeepCandidates",
+              "type": "number"
+            },
+            {
+              "name": "skipResearch",
+              "type": "boolean"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        5264,
+        6720
+      ],
+      "id": "6e9be8db-ffa4-4b98-8018-5b47ebbbd4b3",
+      "name": "Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst candidate = data.deepCandidate ?? null;\nconst resolution = candidate?.resolution ?? {};\nconst repoUrl = candidate?.repositoryUrl ?? candidate?.sourceUrls?.find((url) => String(url).includes('github.com')) ?? null;\nconst match = typeof repoUrl === 'string' ? repoUrl.match(/github\\.com\\/([^/]+)\\/([^/#?]+)/i) : null;\nconst repoSlug = match ? (match[1] + '/' + match[2]).replace(/\\.git$/i, '') : null;\nconst github = repoSlug ? { owner: repoSlug.split('/')[0], repo: repoSlug.split('/')[1], repoSlug } : null;\nconst cleanVersion = (value) => {\n  if (!value) return null;\n  const versionMatch = String(value).match(/(\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?)/);\n  return versionMatch ? versionMatch[1] : null;\n};\nconst registryPackageName = resolution.registryPackageName ?? candidate?.name ?? null;\nreturn [{ json: { ...data, deepCandidate: candidate, repoUrl, github, npmUrl: registryPackageName ? ('https://www.npmjs.com/package/' + registryPackageName) : null, currentVersionClean: candidate ? cleanVersion(resolution.wantedVersion ?? candidate.currentVersion) : null, latestVersionClean: candidate ? cleanVersion(resolution.latestVersion ?? candidate.latestVersion) : null, skipResearch: Boolean(data.skipResearch || !candidate) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5504,
+        6720
+      ],
+      "id": "f567ae19-0bb1-41de-8392-cbec744cbb91",
+      "name": "Normalize package context"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.skipResearch ? 'https://registry.npmjs.org/-/ping' : 'https://registry.npmjs.org/' + encodeURIComponent($json.deepCandidate.resolution?.registryPackageName ?? $json.deepCandidate.name) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5744,
+        6720
+      ],
+      "id": "a2f616af-e134-4e70-be9a-b90562683eda",
+      "name": "npm registry metadata"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $('Normalize package context').first().json.github?.repoSlug ?? '' }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        5968,
+        6720
+      ],
+      "id": "bde28eb7-8d83-4618-9cb9-476463dd1b54",
+      "name": "IF GitHub repo?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const context = $('Normalize package context').first().json;\n\nconst contents = $input\n  .all()\n  .map(({ json }) => ({\n    name: json.name ?? json.fileName ?? '',\n    path: json.path ?? json.filePath ?? '',\n    url: json.url ?? json.self ?? null,\n    download_url: json.download_url ?? json.downloadUrl ?? null,\n    html_url: json.html_url ?? json.htmlUrl ?? null,\n    type: json.type ?? null,\n  }))\n  .filter((entry) => entry.name && entry.path);\n\nconst classify = (entry) => {\n  const fileName = String(entry.name ?? '').toLowerCase();\n  if (!fileName || entry.type === 'dir') return null;\n\n  if (fileName.includes('migration') || fileName.includes('upgrade')) {\n    return {\n      name: entry.name,\n      path: entry.path,\n      apiUrl: entry.url,\n      downloadUrl: entry.download_url ?? null,\n      htmlUrl: entry.html_url ?? entry.download_url ?? context.repoUrl,\n      label: 'migration-guide',\n      priority: 1,\n    };\n  }\n\n  if (\n    fileName.includes('changelog') ||\n    fileName === 'changes.md' ||\n    fileName === 'history.md' ||\n    fileName.includes('release-notes')\n  ) {\n    return {\n      name: entry.name,\n      path: entry.path,\n      apiUrl: entry.url,\n      downloadUrl: entry.download_url ?? null,\n      htmlUrl: entry.html_url ?? entry.download_url ?? context.repoUrl,\n      label: 'changelog',\n      priority: 2,\n    };\n  }\n\n  if (fileName === 'readme.md' || fileName === 'readme') {\n    return {\n      name: entry.name,\n      path: entry.path,\n      apiUrl: entry.url,\n      downloadUrl: entry.download_url ?? null,\n      htmlUrl: entry.html_url ?? entry.download_url ?? context.repoUrl,\n      label: 'docs',\n      priority: 3,\n    };\n  }\n\n  return null;\n};\n\nconst docCandidates = contents\n  .map(classify)\n  .filter(Boolean)\n  .sort((left, right) => left.priority - right.priority || left.name.localeCompare(right.name));\n\nreturn [{\n  json: {\n    ...context,\n    docCandidates: docCandidates.slice(0, 3),\n    primaryDocTarget: docCandidates[0] ?? null,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6448,
+        6704
+      ],
+      "id": "395ba042-7c85-4bec-86c0-b716f869e340",
+      "name": "Select documentation target"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.primaryDocTarget?.apiUrl ?? '' }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        6656,
+        6704
+      ],
+      "id": "0c374cad-fe72-449c-83b9-d0320c9d8106",
+      "name": "IF documentation target?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const context = $('Normalize package context').first().json;\nconst npm = $('npm registry metadata').first()?.json ?? {};\nreturn [{\n  json: {\n    context,\n    npm,\n    releases: [],\n    primaryDocTarget: null,\n    docPayload: null\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6176,
+        6928
+      ],
+      "id": "253f3f2a-04dd-43a0-b546-a2662f616744",
+      "name": "Build empty research envelope"
+    },
+    {
+      "parameters": {
+        "jsCode": "const context = $('Normalize package context').first().json;\nconst npm = $('npm registry metadata').first()?.json ?? {};\nconst docSelection = $('Select documentation target').first()?.json ?? {};\nconst releases = $input.all().map((item) => item.json).filter((entry) => entry && typeof entry === 'object');\nlet docPayload = null;\ntry {\n  docPayload = $('GitHub documentation raw').first()?.json ?? null;\n} catch (error) {\n  docPayload = null;\n}\nreturn [{\n  json: {\n    context,\n    npm,\n    releases,\n    primaryDocTarget: docSelection.primaryDocTarget ?? null,\n    docPayload\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7344,
+        6720
+      ],
+      "id": "319bd230-a71f-4e67-b69c-834fcb019b55",
+      "name": "Build GitHub research envelope"
+    },
+    {
+      "parameters": {
+        "jsCode": "const envelope = $input.first().json ?? {};\nconst context = envelope.context ?? {};\nconst npm = envelope.npm ?? {};\nconst releases = Array.isArray(envelope.releases) ? envelope.releases : [];\nconst primaryDocTarget = envelope.primaryDocTarget ?? null;\nconst docPayload = envelope.docPayload ?? null;\nconst candidate = context.deepCandidate ?? null;\n\nconst normalizeText = (value) => {\n  if (typeof value === 'string') return value;\n  if (value === null || value === undefined) return '';\n  if (Array.isArray(value)) {\n    return value.map(normalizeText).filter(Boolean).join('\\n\\n');\n  }\n  if (typeof value === 'object') {\n    for (const key of ['content', 'text', 'body', 'data', 'raw', 'readme']) {\n      if (typeof value[key] === 'string') return value[key];\n    }\n    return '';\n  }\n  return String(value);\n};\n\nif (context.skipResearch || !candidate) {\n  return [{\n    json: {\n      ...context,\n      canonicalEvidence: [],\n      canonicalEvidenceStatus: 'none',\n      needsFallback: true,\n    }\n  }];\n}\n\nconst cleanVersion = (value) => {\n  if (!value) return null;\n  const versionMatch = String(value).match(/(\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?)/);\n  return versionMatch ? versionMatch[1] : null;\n};\n\nconst parseSemver = (value) => {\n  const cleaned = cleanVersion(value);\n  if (!cleaned) return null;\n  const match = cleaned.match(/^(\\d+)\\.(\\d+)\\.(\\d+)/);\n  if (!match) return null;\n  return {\n    raw: cleaned,\n    major: Number(match[1]),\n    minor: Number(match[2]),\n    patch: Number(match[3]),\n  };\n};\n\nconst compareSemver = (left, right) => {\n  if (!left || !right) return 0;\n  if (left.major !== right.major) return left.major - right.major;\n  if (left.minor !== right.minor) return left.minor - right.minor;\n  return left.patch - right.patch;\n};\n\nconst pickDocExcerpt = (text, versions) => {\n  const source = normalizeText(text).replace(/\\r/g, '');\n  if (!source.trim()) return '';\n\n  const needles = versions\n    .filter(Boolean)\n    .flatMap((value) => [value, `v${value}`, `[${value}]`])\n    .map((value) => String(value).toLowerCase());\n\n  const haystack = source.toLowerCase();\n  let index = -1;\n\n  for (const needle of needles) {\n    const found = haystack.indexOf(needle);\n    if (found >= 0) {\n      index = found;\n      break;\n    }\n  }\n\n  if (index < 0) return source.slice(0, 1400);\n\n  const start = Math.max(0, index - 220);\n  return source.slice(start, start + 1400);\n};\n\nconst decodeDocContent = (payload) => {\n  if (!payload) return '';\n  if (typeof payload === 'string') return payload;\n\n  for (const key of ['content', 'data', 'fileContent', 'text', 'body']) {\n    if (typeof payload[key] === 'string') {\n      if (payload.encoding === 'base64') {\n        try {\n          return Buffer.from(payload[key].replace(/\\n/g, ''), 'base64').toString('utf8');\n        } catch (error) {\n          return '';\n        }\n      }\n      return payload[key];\n    }\n  }\n\n  return '';\n};\n\nconst currentPublishedAt =\n  context.currentVersionClean && npm?.time?.[context.currentVersionClean]\n    ? npm.time[context.currentVersionClean]\n    : null;\n\nconst latestPublishedAt =\n  context.latestVersionClean && npm?.time?.[context.latestVersionClean]\n    ? npm.time[context.latestVersionClean]\n    : null;\n\nconst metadataBits = [\n  `Current ${candidate.currentVersion}`,\n  `latest ${candidate.latestVersion}`,\n  `diff ${candidate.diffType}`,\n  `deprecated ${candidate.deprecated}`,\n  currentPublishedAt ? `current published ${currentPublishedAt}` : null,\n  latestPublishedAt ? `latest published ${latestPublishedAt}` : null,\n  npm?.['dist-tags']?.latest ? `dist-tag latest ${npm['dist-tags'].latest}` : null,\n].filter(Boolean).join('; ');\n\nconst evidence = [{\n  packageName: candidate.name,\n  label: 'npm',\n  url: context.npmUrl,\n  title: 'npm metadata',\n  excerpt: metadataBits,\n  confidence: 'high',\n}];\n\nlet deprecatedMessage = null;\nfor (const key of [\n  context.latestVersionClean,\n  candidate.latestVersion,\n  context.currentVersionClean,\n  candidate.currentVersion,\n]) {\n  if (key && npm?.versions?.[key]?.deprecated) {\n    deprecatedMessage = npm.versions[key].deprecated;\n    break;\n  }\n}\n\nif (deprecatedMessage || candidate.deprecated) {\n  evidence.push({\n    packageName: candidate.name,\n    label: 'npm',\n    url: context.npmUrl,\n    title: 'deprecation notice',\n    excerpt: String(\n      deprecatedMessage ?? 'npm y el analisis base marcan este paquete como deprecated.'\n    ),\n    confidence: 'high',\n  });\n}\n\nconst currentParsed = parseSemver(context.currentVersionClean ?? candidate.currentVersion);\nconst latestParsed = parseSemver(context.latestVersionClean ?? candidate.latestVersion);\nconst releaseList = releases.filter((release) => release && typeof release === 'object');\nconst relevantReleases = releaseList.filter((release) => {\n  const parsed = parseSemver(String(release?.tag_name ?? release?.name ?? ''));\n  if (!parsed) return false;\n  if (latestParsed && compareSemver(parsed, latestParsed) > 0) return false;\n  if (currentParsed && compareSemver(parsed, currentParsed) <= 0) return false;\n  return true;\n});\n\nconst selectedReleases = (relevantReleases.length ? relevantReleases : releaseList).slice(0, 4);\n\nfor (const release of selectedReleases) {\n  const body = normalizeText(release?.body).trim();\n  if (body.length < 40) continue;\n\n  evidence.push({\n    packageName: candidate.name,\n    label: 'github-release',\n    url: release.html_url ?? context.repoUrl ?? context.npmUrl,\n    title: release.name ?? release.tag_name ?? 'release',\n    excerpt: body.slice(0, 1400),\n    publishedAt: release.published_at ?? null,\n    confidence: 'high',\n  });\n}\n\nconst docContent = decodeDocContent(docPayload);\n\nif (primaryDocTarget && docContent.trim()) {\n  evidence.push({\n    packageName: candidate.name,\n    label: primaryDocTarget.label,\n    url: primaryDocTarget.htmlUrl ?? primaryDocTarget.downloadUrl ?? context.repoUrl ?? context.npmUrl,\n    title: primaryDocTarget.name,\n    excerpt: pickDocExcerpt(docContent, [context.latestVersionClean, context.currentVersionClean]),\n    confidence: primaryDocTarget.label === 'docs' ? 'medium' : 'high',\n  });\n} else {\n  const npmReadme = normalizeText(npm?.readme);\n  if (!selectedReleases.length && npmReadme.trim()) {\n    evidence.push({\n      packageName: candidate.name,\n      label: 'docs',\n      url: context.npmUrl,\n      title: 'README from npm registry',\n      excerpt: pickDocExcerpt(npmReadme, [context.latestVersionClean, context.currentVersionClean]),\n      confidence: 'medium',\n    });\n  }\n}\n\nconst verifiedCanonicalEvidence = evidence.filter((entry) => {\n  if (entry.label === 'npm' && entry.title === 'deprecation notice') return true;\n  if (!['github-release', 'changelog', 'migration-guide'].includes(entry.label)) return false;\n  return String(entry.excerpt ?? '').trim().length >= 80;\n});\n\nconst canonicalEvidenceStatus =\n  verifiedCanonicalEvidence.length ? 'verified' : evidence.length ? 'partial' : 'none';\n\nreturn [{\n  json: {\n    ...context,\n    canonicalEvidence: evidence.slice(0, 8),\n    canonicalEvidenceStatus,\n    needsFallback: verifiedCanonicalEvidence.length === 0,\n    primaryDocTarget,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6496,
+        6928
+      ],
+      "id": "c02bbe8b-f62b-4eee-90ce-df11b8421a80",
+      "name": "Extract evidence window"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ String(!$json.needsFallback) }}",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        5568,
+        7184
+      ],
+      "id": "8e5cbbce-504f-46e3-b17e-92846e5c14a4",
+      "name": "IF canonical evidence enough?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst parsed = raw.output ?? raw;\n\nconst prep = $('Prepare package brief input').first().json;\nconst candidate = prep.deepCandidate;\nconst resolution = candidate?.resolution ?? {};\nconst declaredSpec = resolution.declaredSpec ?? candidate.currentVersion;\nconst wantedVersion = resolution.wantedVersion ?? candidate.currentVersion;\nconst latestVersion = resolution.latestVersion ?? candidate.latestVersion;\nconst requiresManualReview = Boolean(resolution.requiresManualReview);\n\nconst fallbackBrief = {\n  name: candidate.name,\n  summary:\n    prep.evidenceStatus === 'verified'\n      ? `Spec ${declaredSpec}. Wanted ${wantedVersion}; latest ${latestVersion}. Evidencia verificada disponible para revisar antes del merge.`\n      : prep.evidenceStatus === 'partial'\n        ? `Spec ${declaredSpec}. Wanted ${wantedVersion}; latest ${latestVersion}. Evidencia parcial; revisa fuentes oficiales antes de aplicar cambios sensibles.`\n        : `Spec ${declaredSpec}. Wanted ${wantedVersion}; latest ${latestVersion}. No hubo evidencia suficiente para afirmar breaking changes verificables.`,\n  breakingChanges: [],\n  testFocus: candidate.deprecated\n    ? [\n        'Validar rutas criticas que aun usan el paquete deprecated',\n        'Aislar impacto de la sustitucion o remocion'\n      ]\n    : requiresManualReview\n      ? [\n          'Verificar cómo se resuelve realmente el spec en instalación o lockfile',\n          'Confirmar compatibilidad manual antes de cambiar canal, alias o fuente'\n        ]\n      : [\n          'Smoke test del flujo principal afectado',\n          'Verificar build, imports y arranque del proyecto'\n        ],\n  riskLevel:\n    candidate.deprecated || candidate.diffType === 'major' || requiresManualReview\n      ? 'high'\n      : candidate.diffType === 'minor'\n        ? 'medium'\n        : 'low',\n  confidence:\n    prep.evidenceStatus === 'verified'\n      ? 'high'\n      : prep.evidenceStatus === 'partial'\n        ? 'medium'\n        : 'low',\n  evidenceStatus: prep.evidenceStatus ?? 'none',\n  recommendedActions: candidate.deprecated\n    ? [\n        'Planificar reemplazo o salida gradual',\n        'No expandir nuevas dependencias sobre este paquete'\n      ]\n    : requiresManualReview\n      ? [\n          'Tratar este paquete como manual review antes de proponer un upgrade automático',\n          'Revisar declaredSpec, wantedVersion y latestVersion antes de cambiar el comportamiento actual'\n        ]\n      : [\n          'Aplicar upgrade en rama corta',\n          'Validar test focus antes de mergear'\n        ],\n  sources: []\n};\n\nconst allowedSources = new Map();\nfor (const entry of prep.evidence ?? []) {\n  const url = String(entry?.url ?? '');\n  const label = String(entry?.label ?? '');\n  if (!url || !label) continue;\n  if (!allowedSources.has(url)) {\n    allowedSources.set(url, {\n      packageName: candidate.name,\n      label,\n      url\n    });\n  }\n}\n\nconst merged = { ...fallbackBrief, ...parsed };\n\nconst sources = [];\nconst seen = new Set();\n\nfor (const source of [\n  ...((merged.sources ?? []).filter(Boolean)),\n  ...((prep.evidence ?? []).map((entry) => ({\n    packageName: candidate.name,\n    label: entry.label,\n    url: entry.url\n  })))\n]) {\n  const url = String(source?.url ?? '');\n  const canonical = allowedSources.get(url);\n  if (!canonical) continue;\n\n  const key = `${canonical.packageName}|${canonical.label}|${canonical.url}`;\n  if (seen.has(key)) continue;\n\n  seen.add(key);\n  sources.push(canonical);\n}\n\nreturn [\n  {\n    json: {\n      packageBrief: {\n        ...merged,\n        name: candidate.name,\n        sources\n      }\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6848,
+        7152
+      ],
+      "id": "dcf7354a-a3de-4717-91ca-d0079dfc1fee",
+      "name": "Build package brief"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $input.first().json }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7056,
+        7152
+      ],
+      "id": "7e51d97d-9041-4845-81e2-86e60a43fe25",
+      "name": "Return data to parent"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Genera un brief por paquete usando únicamente la evidencia recibida.\n\nObjetivo:\n- summary: sintetiza el upgrade y el nivel de certeza\n- breakingChanges: enumera solo cambios verificables\n- testFocus: indica validaciones concretas\n- recommendedActions: propone siguientes pasos conservadores\n- sources: reutiliza únicamente las fuentes ya presentes en la evidencia\n\nReglas:\n- Devuelve solo un objeto JSON raíz; no uses ```json, no uses arrays, no envuelvas en output\n- No investigues fuera de la entrada.\n- No agregues fuentes nuevas.\n- name debe coincidir exactamente con candidate.name.\n- Usa candidate.resolution para distinguir declaredSpec, wantedVersion, latestVersion, deprecationStatus y requiresManualReview.\n- evidenceStatus debe reflejar el nivel recibido en la entrada.\n- Si evidenceStatus !== 'verified', no afirmes breaking changes salvo una deprecación oficial explícita.\n- Si requiresManualReview es true, dilo claramente y evita recomendar un upgrade automático como hecho consumado.\n- Si la evidencia es parcial o débil, dilo claramente en summary.\n- No repitas toda la evidencia; sintetiza.\n\nEntrada:\n{{ JSON.stringify({\n  candidate: $json.deepCandidate,\n  evidenceStatus: $json.evidenceStatus,\n  evidence: $json.evidence\n}, null, 2) }}\n",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Eres un analista senior de upgrades npm.\nDevuelve exclusivamente datos que cumplan el schema del output parser.\nTodo el texto orientado al usuario debe estar en español técnico natural y ser claro para developers.\n\nRol:\n- Actúa como extractor estricto de evidencia, no como asesor creativo.\n- Resume únicamente lo sustentado por candidate, evidenceStatus y evidence.\n- Usa esta precedencia de evidencia al resolver conflictos: deprecation notice > migration guide > changelog > github-release > docs/readme.\n\nCampos fijos:\n- name debe coincidir exactamente con candidate.name.\n- evidenceStatus debe reflejar el nivel recibido en la entrada.\n\nReglas de precisión:\n- No inventes breaking changes, riesgos, acciones ni fuentes.\n- breakingChanges solo puede incluir cambios sustentados por evidencia verificable.\n- Si evidenceStatus no es verified, breakingChanges debe quedar vacío salvo una deprecación oficial explícita.\n- Usa candidate.resolution.declaredSpec, wantedVersion y latestVersion para separar el spec declarado del target resoluble.\n- Si candidate.resolution.requiresManualReview es true, exprésalo explícitamente y evita afirmar que el upgrade es directo o automático.\n- docs o README solo sirven como contexto secundario; no los uses como breaking change verificado.\n- sources debe usar únicamente URLs presentes en la evidencia de entrada.\n\nReglas de inferencia:\n- Puedes inferir riskLevel, confidence y recommendedActions de forma conservadora usando semver, deprecation, requiresManualReview y evidenceStatus.\n- Si hay incertidumbre, exprésala explícitamente en summary y evita lenguaje tajante.\n\nReglas de estilo:\n- summary debe ser breve, técnico y accionable.\n- testFocus y recommendedActions deben ser concretos y útiles para un equipo técnico.\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        6448,
+        7168
+      ],
+      "id": "218a1a3c-1fc1-4f21-92a1-e2a740e08921",
+      "name": "Basic LLM Chain",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {
+          "maxTokensToSample": 1400,
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        6416,
+        7344
+      ],
+      "id": "568f9959-fbe4-4235-8a85-0f12116fb2a7",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "Z1d7AmcF6EvlW8cq",
+          "name": "Groq API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"name\": { \"type\": \"string\" },\n    \"summary\": { \"type\": \"string\" },\n    \"breakingChanges\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    },\n    \"testFocus\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    },\n    \"riskLevel\": {\n      \"type\": \"string\",\n      \"enum\": [\"low\", \"medium\", \"high\"]\n    },\n    \"confidence\": {\n      \"type\": \"string\",\n      \"enum\": [\"low\", \"medium\", \"high\"]\n    },\n    \"evidenceStatus\": {\n      \"type\": \"string\",\n      \"enum\": [\"verified\", \"partial\", \"none\"]\n    },\n    \"recommendedActions\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    },\n    \"sources\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"properties\": {\n          \"packageName\": { \"type\": \"string\" },\n          \"label\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"npm\",\n              \"github-release\",\n              \"changelog\",\n              \"migration-guide\",\n              \"docs\",\n              \"fallback-search\",\n              \"repository\"\n            ]\n          },\n          \"url\": { \"type\": \"string\" }\n        },\n        \"required\": [\"packageName\", \"label\", \"url\"]\n      }\n    }\n  },\n  \"required\": [\n    \"name\",\n    \"summary\",\n    \"breakingChanges\",\n    \"testFocus\",\n    \"riskLevel\",\n    \"confidence\",\n    \"evidenceStatus\",\n    \"recommendedActions\",\n    \"sources\"\n  ]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        6624,
+        7344
+      ],
+      "id": "4e30fa84-be72-47a3-b5c5-066985a53008",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "query": "={{ `${$('Normalize package context').first().json.deepCandidate.name} ${$('Normalize package context').first().json.currentVersionClean ?? $('Normalize package context').first().json.deepCandidate.currentVersion} to ${$('Normalize package context').first().json.latestVersionClean ?? $('Normalize package context').first().json.deepCandidate.latestVersion} release notes changelog migration guide ${$('Normalize package context').first().json.github?.repoSlug ?? ''}`.trim() }}",
+        "options": {
+          "topic": "general",
+          "search_depth": "advanced",
+          "max_results": 4,
+          "include_raw_content": false,
+          "include_images": false,
+          "include_domains": []
+        }
+      },
+      "type": "@tavily/n8n-nodes-tavily.tavily",
+      "typeVersion": 1,
+      "position": [
+        5728,
+        7328
+      ],
+      "id": "68f982bb-da0a-4710-94a4-97e65e4810f8",
+      "name": "Tavily Search",
+      "credentials": {
+        "tavilyApi": {
+          "id": "oEbE6YB6UzRmeSoJ",
+          "name": "Tavily account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "resource": "extract",
+        "urls": [
+          "={{ $('Tavily Search').first().json.results?.[0]?.url ?? '' }}",
+          "={{ $('Tavily Search').first().json.results?.[1]?.url ?? '' }}"
+        ],
+        "options": {
+          "include_images": false,
+          "extract_depth": "basic",
+          "format": "markdown"
+        }
+      },
+      "type": "@tavily/n8n-nodes-tavily.tavily",
+      "typeVersion": 1,
+      "position": [
+        5904,
+        7232
+      ],
+      "id": "f627fa18-d46e-427b-ac4e-3824de821496",
+      "name": "Tavily Extract",
+      "credentials": {
+        "tavilyApi": {
+          "id": "oEbE6YB6UzRmeSoJ",
+          "name": "Tavily account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "resource": "release",
+        "operation": "getAll",
+        "owner": {
+          "__rl": true,
+          "value": "={{ $('Normalize package context').first().json.github.owner }}",
+          "mode": "name"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "={{ $('Normalize package context').first().json.github.repo }}",
+          "mode": "name"
+        },
+        "limit": 10
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        7104,
+        6720
+      ],
+      "id": "1f3aedcb-09db-440e-9548-370d43cd5d02",
+      "name": "GitHub releases",
+      "webhookId": "cc57291a-1244-4952-80cb-f1d29dc0714c",
+      "alwaysOutputData": true,
+      "credentials": {
+        "githubApi": {
+          "id": "tQguFU1WHwf0i6hf",
+          "name": "GitHub account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "list",
+        "owner": {
+          "__rl": true,
+          "value": "={{ $('Normalize package context').first().json.github.owner }}",
+          "mode": "name"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "={{ $('Normalize package context').first().json.github.repo }}",
+          "mode": "name"
+        }
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        6224,
+        6704
+      ],
+      "id": "76ef0684-5d0a-4563-b77b-51dcf27ac159",
+      "name": "GitHub contents index",
+      "webhookId": "5bfe547b-3f80-453a-a397-6b4ccf1e6379",
+      "credentials": {
+        "githubApi": {
+          "id": "tQguFU1WHwf0i6hf",
+          "name": "GitHub account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "get",
+        "owner": {
+          "__rl": true,
+          "value": "={{ $('Normalize package context').first().json.github.owner }}",
+          "mode": "name"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "={{ $('Normalize package context').first().json.github.repo }}",
+          "mode": "name"
+        },
+        "filePath": "={{ $json.primaryDocTarget.path }}",
+        "asBinaryProperty": false,
+        "additionalParameters": {}
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        6864,
+        6592
+      ],
+      "id": "4dd789fe-3e9d-4dd7-a4f4-6e15d20c4971",
+      "name": "GitHub documentation raw",
+      "webhookId": "8f8d3ebd-485f-4b02-a353-f97103496c0e",
+      "credentials": {
+        "githubApi": {
+          "id": "tQguFU1WHwf0i6hf",
+          "name": "GitHub account 2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Prepare package brief input": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize package context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize package context": {
+      "main": [
+        [
+          {
+            "node": "npm registry metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "npm registry metadata": {
+      "main": [
+        [
+          {
+            "node": "IF GitHub repo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF GitHub repo?": {
+      "main": [
+        [
+          {
+            "node": "GitHub contents index",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build empty research envelope",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select documentation target": {
+      "main": [
+        [
+          {
+            "node": "IF documentation target?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF documentation target?": {
+      "main": [
+        [
+          {
+            "node": "GitHub documentation raw",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GitHub releases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build empty research envelope": {
+      "main": [
+        [
+          {
+            "node": "Extract evidence window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build GitHub research envelope": {
+      "main": [
+        [
+          {
+            "node": "Extract evidence window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract evidence window": {
+      "main": [
+        [
+          {
+            "node": "IF canonical evidence enough?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF canonical evidence enough?": {
+      "main": [
+        [
+          {
+            "node": "Prepare package brief input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tavily Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build package brief": {
+      "main": [
+        [
+          {
+            "node": "Return data to parent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Build package brief",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build package brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tavily Search": {
+      "main": [
+        [
+          {
+            "node": "Tavily Extract",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare package brief input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tavily Extract": {
+      "main": [
+        [
+          {
+            "node": "Prepare package brief input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare package brief input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub releases": {
+      "main": [
+        [
+          {
+            "node": "Build GitHub research envelope",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub contents index": {
+      "main": [
+        [
+          {
+            "node": "Select documentation target",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub documentation raw": {
+      "main": [
+        [
+          {
+            "node": "GitHub releases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e490f8befecaf7a9f4d99d1603a8853f049a2db15b61a8bb1289ed6e3e60c4ff"
+  }
+}
