@@ -305,6 +305,38 @@
 		)[label as SourceLabel | 'repo'] ?? label;
 	}
 
+	function extractReleaseVersionFromUrl(url: string) {
+		try {
+			const pathname = new URL(url).pathname;
+			const releaseTagPrefix = '/releases/tag/';
+			const tagIndex = pathname.indexOf(releaseTagPrefix);
+
+			if (tagIndex === -1) {
+				return null;
+			}
+
+			const tag = decodeURIComponent(pathname.slice(tagIndex + releaseTagPrefix.length)).trim();
+			return tag || null;
+		} catch {
+			return null;
+		}
+	}
+
+	function formatSourceDescriptor(source: {
+		label: SourceLabel | string;
+		url: string;
+		version?: string | null;
+	}) {
+		const baseLabel = formatSourceLabel(source.label);
+
+		if (source.label !== 'github-release') {
+			return baseLabel;
+		}
+
+		const version = source.version?.trim() || extractReleaseVersionFromUrl(source.url);
+		return version ? `${baseLabel} ${version}` : baseLabel;
+	}
+
 	function getEvidenceMessage(brief: Partial<PackageBrief>) {
 		const evidenceStatus = brief.evidenceStatus ?? 'none';
 		const confidence = brief.confidence ?? 'low';
@@ -816,7 +848,7 @@
 														rel="noreferrer"
 													>
 														<span class="flex items-center gap-2">
-															<span class="font-medium text-slate-900">{formatSourceLabel(source.label)}</span>
+															<span class="font-medium text-slate-900">{formatSourceDescriptor(source)}</span>
 															<span class="text-xs text-slate-500">{source.packageName}</span>
 														</span>
 														<span class="font-mono text-xs text-slate-500">open</span>
@@ -846,7 +878,7 @@
 								>
 									<span>
 										<span class="font-semibold text-slate-900">{source.packageName}</span>
-										<span class="ml-2 text-slate-500">{formatSourceLabel(source.label)}</span>
+										<span class="ml-2 text-slate-500">{formatSourceDescriptor(source)}</span>
 									</span>
 									<span class="font-mono text-xs text-slate-500">open</span>
 								</a>
