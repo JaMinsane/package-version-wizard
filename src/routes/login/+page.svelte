@@ -5,8 +5,12 @@
 
 	let { form }: { form: ActionData } = $props();
 
-	let mode: 'login' | 'register' = $state(form?.action === 'register' ? 'register' : 'login');
+	let mode: 'login' | 'register' = $state('login');
 	let showPassword = $state(false);
+
+	$effect(() => {
+		if (form?.action === 'register') mode = 'register';
+	});
 </script>
 
 <svelte:head>
