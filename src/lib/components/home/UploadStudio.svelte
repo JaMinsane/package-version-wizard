@@ -58,7 +58,7 @@
 	}
 </script>
 
-<section class="terminal-window">
+<section id="upload" class="terminal-window">
 	<div class="terminal-bar">
 		<div class="terminal-dots">
 			<span class="terminal-dot terminal-dot--red"></span>

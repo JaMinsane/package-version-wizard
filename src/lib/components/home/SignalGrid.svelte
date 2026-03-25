@@ -20,7 +20,7 @@
 	}
 </script>
 
-<section class="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+<section id="signals" class="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
 	<div class="terminal-window">
 		<div class="terminal-bar">
 			<div class="terminal-dots">

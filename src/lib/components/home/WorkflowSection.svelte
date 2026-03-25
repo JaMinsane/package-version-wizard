@@ -2,7 +2,7 @@
 	import { homeFlowSteps } from '$lib/ui/home/content';
 </script>
 
-<section class="terminal-window">
+<section id="workflow" class="terminal-window">
 	<div class="terminal-bar">
 		<div class="terminal-dots">
 			<span class="terminal-dot terminal-dot--red"></span>
