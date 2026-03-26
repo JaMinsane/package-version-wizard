@@ -1,33 +1,53 @@
 # Package Version Wizard
 
-Package Version Wizard es un MVP de hackathon construido con `SvelteKit + Bun + Tailwind + Postgres + n8n`.
+Package Version Wizard es una app full-stack construida con `SvelteKit + Bun + Tailwind + Postgres + n8n`.
 
-Subes un `package.json`, la app:
+El flujo principal no cambió: el usuario sube un `package.json`, el servidor analiza dependencias, dispara `n8n` para la investigación/síntesis AI y persiste un brief ejecutivo con trazabilidad por paquete.
 
-1. parsea dependencias de forma determinista
-2. consulta npm registry
-3. calcula riesgo preliminar y prioridades
-4. dispara un workflow orquestador de `n8n`
-5. investiga en profundidad los paquetes más críticos con fuentes canónicas y fallback web controlado
-6. recibe un callback firmado con el brief AI enriquecido
-7. expone el resultado en `/analysis/[id]`
+La integración de Slack sí cambió de forma explícita:
 
-## Cómo fluye el análisis
+> Subes tu `package.json`, recibes el análisis completo y, si lo configuras, Slack recibe un brief ejecutivo corto con deep link al análisis.
 
-- La app calcula un ranking preliminar y dispara el workflow orquestador `dependency-analysis`.
-- El orquestador separa quick wins, high risk y paquetes `deprecated`.
-- Los paquetes más sensibles pasan por el subworkflow `package-research`.
-- `package-research` funciona como extractor estricto: prioriza fuentes canónicas, usa fallback web controlado y produce un `packageBrief` por paquete.
-- `dependency-analysis` funciona como sintetizador: consolida los `packageBriefs`, construye el plan por fases y envía el callback final a la app.
-- La app persiste el callback firmado, renderiza Markdown seguro y deja trazabilidad visible por paquete y a nivel global.
+Slack ya no funciona como radar continuo ni como automatización recurrente. En esta base sólo existe como notificación final por canal.
 
-## Stack
+## Estado actual del producto
 
-- Runtime: Bun
-- Framework: SvelteKit
-- UI: Tailwind CSS v4
-- Persistencia: Postgres vía `Bun.SQL`
-- Automatización y AI: n8n
+- Landing pública en `/`
+- Upload autenticado en `/upload`
+- Login y registro en `/login`
+- Vista pública compartible en `/analysis/[id]`
+- Configuración autenticada de Slack en `/settings/integrations/slack`
+- Callback interno firmado desde `n8n` en `/api/internal/n8n/callback`
+
+## Flujo end-to-end
+
+1. El usuario autenticado sube un `package.json`.
+2. SvelteKit valida el archivo y persiste `project`, `analysis` y `analysis_dependencies`.
+3. El backend resuelve `notificationContext.slack` desde:
+   - workspace Slack instalado
+   - defaults del usuario
+   - override opcional del proyecto
+4. La app llama el webhook privado `dependency-analysis` de `n8n`.
+5. `n8n` investiga paquetes críticos, sintetiza el brief final y, si Slack está habilitado, publica el resultado con el nodo oficial de Slack.
+6. `n8n` hace callback firmado a la app con:
+   - `executiveSummaryMd`
+   - `upgradePlan`
+   - `packageBriefs`
+   - `sources`
+   - `slackDigestMd`
+   - `slackNotification`
+7. La vista `/analysis/[id]` muestra el resultado y el estado del último envío a Slack.
+
+## Slack en esta migración
+
+- Un solo workspace por despliegue
+- OAuth de Slack manejado por la app
+- Token bot guardado cifrado en Postgres
+- La publicación la hace `n8n`, no el backend de SvelteKit
+- La app nunca envía tokens de Slack en el webhook inicial
+- La app sí envía configuración no sensible en `notificationContext.slack`
+- Se notifica tanto en `completed` como en `failed`
+- Si Slack falla, el análisis no pasa a `failed`; sólo queda auditado `slackNotification.status = failed`
 
 ## Variables de entorno de la app
 
@@ -35,17 +55,23 @@ Copia `.env.example` a `.env` y completa:
 
 ```bash
 DATABASE_URL=
+APP_BASE_URL=
+
 N8N_ANALYSIS_WEBHOOK_URL=
 N8N_ANALYSIS_WEBHOOK_TOKEN=
 N8N_CALLBACK_SECRET=
-APP_BASE_URL=
-N8N_INTERNAL_API_TOKEN=
+
+N8N_API_BASE_URL=
+N8N_API_KEY=
+
+SLACK_CLIENT_ID=
+SLACK_CLIENT_SECRET=
+SLACK_INSTALLATION_ENCRYPTION_KEY=
 ```
 
 ## Variables y secretos esperados en `n8n`
 
-Los workflows exportados en [`n8n/dependency-analysis.json`](./n8n/dependency-analysis.json) y
-[`n8n/package-research.json`](./n8n/package-research.json) esperan estos valores:
+Los workflows exportados esperan estos valores dentro de `n8n`:
 
 ```bash
 APP_CALLBACK_URL=
@@ -55,35 +81,28 @@ GITHUB_TOKEN=
 TAVILY_API_KEY=
 ```
 
-Además, el webhook `dependency-analysis` sigue esperando auth por header en la credencial
-`httpHeaderAuth` configurada dentro de `n8n`.
+Notas:
 
-## Reglas de trazabilidad y seguridad del brief
-
-- `package-research` y `dependency-analysis` usan `Basic LLM Chain` con `Structured Output Parser`.
-- Ambos workflows operan con prompts conservadores: el subworkflow extrae evidencia y el parent sintetiza, no reinvestiga.
-- `sources` usa whitelist estricta:
-  - en el subworkflow solo sobreviven URLs presentes en la evidencia recopilada
-  - en el workflow padre solo sobreviven URLs ya aprobadas en la consolidación previa
-- Esto evita que el modelo introduzca URLs nuevas aunque tengan formato válido.
-- Si el LLM del parent falla pero ya existen `packageBriefs`, el workflow devuelve una síntesis degradada con estado `completed` y mantiene las fuentes reales.
-- El callback final hacia la app usa timeout y retries para reducir pérdidas de resultados por fallos transitorios de red.
+- El webhook `dependency-analysis` usa `x-ingress-token` desde la app.
+- El callback de `n8n` hacia SvelteKit usa:
+  - `x-n8n-signature: APP_CALLBACK_SECRET`
+  - `x-idempotency-key: <valor-unico>`
+- El workflow `dependency-analysis` usa el nodo oficial de Slack con una credencial administrada que la app intenta sincronizar vía `N8N_API_BASE_URL` + `N8N_API_KEY`.
 
 ## Desarrollo
 
 ```bash
 bun install
+bun run db:migrate
 bun run dev
 ```
 
-## Base de datos
+## Verificación local
 
 ```bash
-bun run db:ping
-bun run db:migrate
+bun run check
+bun run lint
 ```
-
-La documentación técnica del esquema está en [`BD.md`](./BD.md).
 
 ## Producción
 
@@ -92,18 +111,70 @@ bun run build
 bun run start
 ```
 
-El contenedor también puede ejecutar migraciones al arrancar según el `entrypoint`.
-
-## Rutas principales
-
-- `/` upload wizard
-- `/analysis/[id]` vista compartible del resultado
-- `/api/analyses/[id]` polling del estado
-- `/api/internal/n8n/callback` callback firmado desde n8n
-- `/api/internal/radar/subscriptions` feed interno para radar continuo
-- `/api/internal/radar/reanalyze` reanálisis interno por proyecto
+Si prefieres arrancar directamente el output de `adapter-node`, usa `node build/index.js`.
 
 ## Workflows incluidos
 
-- `n8n/dependency-analysis.json`: orquestador principal, consolidación, síntesis ejecutiva y callback firmado
-- `n8n/package-research.json`: subworkflow de investigación por paquete con extracción estricta de evidencia
+- `n8n/dependency-analysis.json`: workflow principal con tiers, síntesis AI, notificación a Slack y callback a la app
+- `n8n/package-research.json`: investigación profunda por paquete
+
+## Contrato relevante hacia `n8n`
+
+Payload inicial resumido:
+
+```json
+{
+	"analysisId": "analysis_...",
+	"projectName": "mi-proyecto",
+	"analysisUrl": "https://app.example.com/analysis/analysis_...",
+	"dependencyStats": {
+		"total": 32,
+		"outdated": 10,
+		"majors": 3,
+		"deprecated": 1
+	},
+	"candidates": [],
+	"notificationContext": {
+		"slack": {
+			"workspaceInstalled": true,
+			"enabled": true,
+			"channelId": "C123",
+			"channelName": "deps-alerts",
+			"notifyOnSuccess": true,
+			"notifyOnFailure": true,
+			"includeExecutiveBrief": true,
+			"includeTopPackages": true,
+			"topPackagesLimit": 3,
+			"requestedByUserId": "user_...",
+			"requestedByUserName": "Jane Doe"
+		}
+	}
+}
+```
+
+Callback resumido:
+
+```json
+{
+	"analysisId": "analysis_...",
+	"status": "completed",
+	"executiveSummaryMd": "...",
+	"upgradePlan": [],
+	"packageBriefs": [],
+	"slackDigestMd": "...",
+	"slackNotification": {
+		"enabled": true,
+		"attempted": true,
+		"status": "sent",
+		"channelId": "C123",
+		"channelName": "deps-alerts",
+		"notifiedAt": "2026-03-26T00:00:00.000Z"
+	},
+	"sources": []
+}
+```
+
+## Documentación técnica
+
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md)
+- [`BD.md`](./BD.md)

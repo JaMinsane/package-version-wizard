@@ -1,25 +1,23 @@
-import type {
-	FlowStep,
-	HeroStat,
-	ReadinessItemDefinition,
-	StoryCard
-} from '$lib/ui/home/types';
+import type { FlowStep, HeroStat, ReadinessItemDefinition, StoryCard } from '$lib/ui/home/types';
 
 export const homeHeroStats: HeroStat[] = [
 	{
 		value: '1 upload',
 		label: 'Manifiesto listo para analizar',
-		description: 'El flujo parte de un `package.json` real y mantiene el procesamiento del lado del servidor.'
+		description:
+			'El flujo parte de un `package.json` real y mantiene el procesamiento del lado del servidor.'
 	},
 	{
 		value: '3 capas',
 		label: 'Diff, resumen y ejecución',
-		description: 'Registry, brief y plan de acción quedan alineados en una misma corrida persistida.'
+		description:
+			'Registry, brief y plan de acción quedan alineados en una misma corrida persistida.'
 	},
 	{
 		value: 'URL viva',
 		label: 'Resultado compartible',
-		description: 'El análisis se guarda, se puede volver a abrir y soporta seguimiento continuo.'
+		description:
+			'El análisis se guarda, se puede volver a abrir y deja listo el deep link para Slack.'
 	}
 ];
 
@@ -39,10 +37,10 @@ export const homeStoryCards: StoryCard[] = [
 		accent: 'violet'
 	},
 	{
-		eyebrow: 'Continuidad',
-		title: 'La primera corrida no queda aislada.',
+		eyebrow: 'Notificación final',
+		title: 'El resultado también puede aterrizar en Slack.',
 		description:
-			'La automatización por Slack mantiene el proyecto observable sin repetir el proceso manual cada vez.',
+			'El brief ejecutivo y el enlace al análisis completo llegan al canal configurado cuando la corrida termina.',
 		accent: 'emerald'
 	}
 ];
@@ -88,10 +86,11 @@ export const homeFlowSteps: FlowStep[] = [
 	},
 	{
 		index: '03',
-		title: 'Revisa y automatiza',
+		title: 'Revisa y notifica',
 		description:
-			'La vista de análisis consolida brief, dependencias críticas, evidencia y automatización continua.',
-		detail: 'Si el radar está habilitado, el proyecto queda conectado a un seguimiento recurrente.'
+			'La vista de análisis consolida brief, dependencias críticas, evidencia y la configuración Slack por proyecto.',
+		detail:
+			'Si Slack está activo, n8n envía la notificación final al canal elegido con deep link incluido.'
 	}
 ];
 

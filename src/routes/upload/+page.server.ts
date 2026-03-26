@@ -2,6 +2,7 @@ import { env as privateEnv } from '$env/dynamic/private';
 import { fail, redirect } from '@sveltejs/kit';
 
 import type { Actions, PageServerLoad } from './$types';
+import { getAppBaseUrl } from '$lib/server/app-url';
 import { startUploadedAnalysis } from '$lib/server/analysis/service';
 import { parseUploadedPackageJson } from '$lib/server/package-json/manifest';
 
@@ -10,7 +11,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(303, '/login');
 	}
 
-	const appBaseUrl = privateEnv.APP_BASE_URL || privateEnv.PUBLIC_APP_URL;
+	const appBaseUrl = getAppBaseUrl();
 
 	return {
 		environmentReady: {
@@ -25,7 +26,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-	analyzePackageJson: async ({ request }) => {
+	analyzePackageJson: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(303, '/login');
+		}
+
 		const formData = await request.formData();
 		const packageJsonFile = formData.get('packageJson');
 		if (!(packageJsonFile instanceof File)) {
@@ -40,7 +45,9 @@ export const actions: Actions = {
 			const parsedManifest = await parseUploadedPackageJson(packageJsonFile);
 
 			({ analysisId } = await startUploadedAnalysis({
-				parsedManifest
+				parsedManifest,
+				requestedByUserId: locals.user.id,
+				requestedByUserName: locals.user.name
 			}));
 		} catch (error) {
 			return fail(400, {
@@ -54,5 +61,3 @@ export const actions: Actions = {
 		throw redirect(303, `/analysis/${analysisId}`);
 	}
 };
-
-

@@ -8,7 +8,7 @@
 	<title>Package Version Wizard | Inteligencia visual para upgrades npm</title>
 	<meta
 		name="description"
-		content="Sube tu package.json y revisa un análisis persistido con diff de dependencias, brief AI y automatización continua."
+		content="Sube tu package.json y revisa un análisis persistido con diff de dependencias, brief AI y notificación final opcional en Slack."
 	/>
 </svelte:head>
 

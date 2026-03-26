@@ -1,3 +1,5 @@
+import type { SlackNotificationContext, SlackNotificationResult } from '$lib/server/slack/types';
+
 export type DependencyGroup =
 	| 'dependencies'
 	| 'devDependencies'
@@ -55,7 +57,6 @@ export type ConfidenceLevel = 'low' | 'medium' | 'high';
 
 export type EvidenceStatus = 'verified' | 'partial' | 'none';
 
-
 export interface DependencyStats {
 	total: number;
 	outdated: number;
@@ -100,6 +101,7 @@ export interface DependencySnapshot extends DependencyCandidate {
 export interface N8nAnalysisRequest {
 	analysisId: string;
 	projectName: string;
+	analysisUrl?: string;
 	dependencyStats: {
 		total: number;
 		outdated: number;
@@ -107,6 +109,9 @@ export interface N8nAnalysisRequest {
 		deprecated: number;
 	};
 	candidates: DependencyCandidate[];
+	notificationContext: {
+		slack: SlackNotificationContext;
+	};
 }
 
 export interface UpgradePhase {
@@ -141,6 +146,7 @@ export interface N8nAnalysisCallback {
 	upgradePlan: UpgradePhase[];
 	packageBriefs: PackageBrief[];
 	slackDigestMd?: string;
+	slackNotification?: SlackNotificationResult;
 	sources: SourceLink[];
 }
 
@@ -149,8 +155,8 @@ export interface ProjectSnapshot {
 	slug: string;
 	name: string;
 	ecosystem: 'npm';
+	ownerUserId?: string;
 }
-
 
 export interface AnalysisSnapshot {
 	id: string;
@@ -166,6 +172,7 @@ export interface AnalysisSnapshot {
 	dependencies: DependencySnapshot[];
 	requestPayload: N8nAnalysisRequest;
 	callbackPayload?: N8nAnalysisCallback;
+	slackNotification?: SlackNotificationResult;
 	renderedSummaryHtml?: string;
 	errorMessage?: string;
 	webhookResponse?: {
@@ -199,4 +206,3 @@ export interface ParsedPackageManifest {
 	projectVersion?: string;
 	dependencies: ManifestDependencyInput[];
 }
-

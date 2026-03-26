@@ -28,20 +28,12 @@
 		return initialData.shareUrl;
 	}
 
-	function getRadarReady() {
-		return initialData.radarReady;
-	}
-
 	let activeAnalysis = $state(getInitialAnalysis());
 	let isPolling = $state(false);
 	let pollingError = $state<string | null>(null);
 
 	$effect(() => {
-		if (
-			!browser ||
-			activeAnalysis.status === 'completed' ||
-			activeAnalysis.status === 'failed'
-		) {
+		if (!browser || activeAnalysis.status === 'completed' || activeAnalysis.status === 'failed') {
 			isPolling = false;
 			return;
 		}
@@ -114,7 +106,7 @@
 	<title>{activeAnalysis.project.name} | Package Version Wizard</title>
 	<meta
 		name="description"
-		content="Vista persistida del análisis de dependencias, con progreso, brief AI y automatización continua."
+		content="Vista persistida del análisis de dependencias, con progreso, brief AI y notificación opcional en Slack."
 	/>
 </svelte:head>
 
@@ -125,10 +117,11 @@
 		<section class="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
 			<AnalysisSidebar
 				analysis={activeAnalysis}
-				formMessage={form?.message}
-				isPolling={isPolling}
-				pollingError={pollingError}
-				radarReady={getRadarReady()}
+				formSuccessMessage={form?.successMessage}
+				formErrorMessage={form?.errorMessage}
+				{isPolling}
+				{pollingError}
+				slack={initialData.slack}
 			/>
 
 			<div class="space-y-6">

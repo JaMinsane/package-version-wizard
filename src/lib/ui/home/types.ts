@@ -1,15 +1,8 @@
-
 export interface EnvironmentReadiness {
 	databaseConfigured: boolean;
 	webhookConfigured: boolean;
 	callbackConfigured: boolean;
 	publicAppConfigured: boolean;
-}
-
-export interface HomeFormValues {
-	subscribeSlack: boolean;
-	slackChannelTarget: string;
-	slackFrequency: 'daily' | 'weekdays' | 'twice_daily';
 }
 
 export interface HeroStat {

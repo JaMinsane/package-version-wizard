@@ -11,6 +11,7 @@ import type {
 	PackageJsonManifest,
 	ProjectSnapshot
 } from '$lib/server/analysis/types';
+import type { SlackNotificationResult } from '$lib/server/slack/types';
 
 type DatabaseClient = ReturnType<typeof getDb>;
 
@@ -26,6 +27,7 @@ interface AnalysisRow {
 	callback_received_at: Date | string | null;
 	request_payload_json: unknown;
 	callback_payload_json: unknown;
+	slack_notification_json: unknown;
 	summary_html: string | null;
 	error_message: string | null;
 	webhook_response_json: unknown;
@@ -34,6 +36,7 @@ interface AnalysisRow {
 	project_slug: string;
 	project_name: string;
 	project_ecosystem: 'npm';
+	project_owner_user_id: string | null;
 }
 
 interface DependencyRow {
@@ -56,6 +59,7 @@ interface ProjectRow {
 	slug: string;
 	name: string;
 	ecosystem: 'npm';
+	owner_user_id: string | null;
 }
 
 export interface ApplyCallbackResult {
@@ -79,12 +83,19 @@ export async function createQueuedAnalysis(
 
 	await db.begin(async (tx: DatabaseClient) => {
 		await tx`
-			INSERT INTO projects (id, slug, name, ecosystem)
-			VALUES (${input.project.id}, ${input.project.slug}, ${input.project.name}, 'npm')
+			INSERT INTO projects (id, slug, name, ecosystem, owner_user_id)
+			VALUES (
+				${input.project.id},
+				${input.project.slug},
+				${input.project.name},
+				'npm',
+				${input.project.ownerUserId ?? null}
+			)
 			ON CONFLICT (id)
 			DO UPDATE SET
 				slug = EXCLUDED.slug,
 				name = EXCLUDED.name,
+				owner_user_id = EXCLUDED.owner_user_id,
 				updated_at = now()
 		`;
 
@@ -96,7 +107,8 @@ export async function createQueuedAnalysis(
 				manifest_name,
 				manifest_json,
 				stats_json,
-				request_payload_json
+				request_payload_json,
+				slack_notification_json
 			)
 			VALUES (
 				${input.analysisId},
@@ -105,7 +117,8 @@ export async function createQueuedAnalysis(
 				${input.manifestName},
 				CAST(${JSON.stringify(input.manifest)} AS jsonb),
 				CAST(${JSON.stringify(input.initialStats)} AS jsonb),
-				CAST(${JSON.stringify(input.initialRequestPayload)} AS jsonb)
+				CAST(${JSON.stringify(input.initialRequestPayload)} AS jsonb),
+				NULL
 			)
 		`;
 	});
@@ -214,6 +227,7 @@ export async function getAnalysisById(id: string): Promise<AnalysisSnapshot | nu
 			a.completed_at,
 			a.request_payload_json,
 			a.callback_payload_json,
+			a.slack_notification_json,
 			a.summary_html,
 			a.error_message,
 			a.webhook_response_json,
@@ -222,6 +236,7 @@ export async function getAnalysisById(id: string): Promise<AnalysisSnapshot | nu
 			p.slug AS project_slug,
 			p.name AS project_name,
 			p.ecosystem AS project_ecosystem,
+			p.owner_user_id AS project_owner_user_id,
 			(
 				SELECT received_at
 				FROM analysis_callback_receipts acr
@@ -377,6 +392,7 @@ export async function applyCallback(
 				package_briefs_json = CAST(${JSON.stringify(payload.packageBriefs)} AS jsonb),
 				sources_json = CAST(${JSON.stringify(payload.sources)} AS jsonb),
 				slack_digest_markdown = ${payload.slackDigestMd ?? null},
+				slack_notification_json = CAST(${JSON.stringify(payload.slackNotification ?? null)} AS jsonb),
 				error_message = ${errorMessage},
 				last_idempotency_key = ${idempotencyKey},
 				updated_at = now(),
@@ -400,7 +416,7 @@ export async function applyCallback(
 export async function getProjectById(id: string): Promise<ProjectSnapshot | null> {
 	const db = getDb();
 	const rows = await db<ProjectRow[]>`
-		SELECT id, slug, name, ecosystem
+		SELECT id, slug, name, ecosystem, owner_user_id
 		FROM projects
 		WHERE id = ${id}
 		LIMIT 1
@@ -413,7 +429,55 @@ export async function getProjectById(id: string): Promise<ProjectSnapshot | null
 				id: row.id,
 				slug: row.slug,
 				name: row.name,
-				ecosystem: row.ecosystem
+				ecosystem: row.ecosystem,
+				ownerUserId: row.owner_user_id ?? undefined
+			}
+		: null;
+}
+
+export async function getProjectByOwnerAndSlug(ownerUserId: string, slug: string) {
+	const db = getDb();
+	const rows = await db<ProjectRow[]>`
+		SELECT id, slug, name, ecosystem, owner_user_id
+		FROM projects
+		WHERE owner_user_id = ${ownerUserId}
+			AND slug = ${slug}
+		LIMIT 1
+	`;
+
+	const row = rows[0];
+
+	return row
+		? {
+				id: row.id,
+				slug: row.slug,
+				name: row.name,
+				ecosystem: row.ecosystem,
+				ownerUserId: row.owner_user_id ?? undefined
+			}
+		: null;
+}
+
+export async function getOwnedProjectForAnalysis(analysisId: string, userId: string) {
+	const db = getDb();
+	const rows = await db<ProjectRow[]>`
+		SELECT p.id, p.slug, p.name, p.ecosystem, p.owner_user_id
+		FROM analyses a
+		INNER JOIN projects p ON p.id = a.project_id
+		WHERE a.id = ${analysisId}
+			AND p.owner_user_id = ${userId}
+		LIMIT 1
+	`;
+
+	const row = rows[0];
+
+	return row
+		? {
+				id: row.id,
+				slug: row.slug,
+				name: row.name,
+				ecosystem: row.ecosystem,
+				ownerUserId: row.owner_user_id ?? undefined
 			}
 		: null;
 }
@@ -441,12 +505,10 @@ export async function getLatestManifestByProject(projectId: string) {
 	};
 }
 
-
-function mapAnalysisRow(
-	row: AnalysisRow,
-	dependencies: DependencyRow[]
-): AnalysisSnapshot {
-	const manifest = row.manifest_json ? parseJsonColumn<PackageJsonManifest>(row.manifest_json) : undefined;
+function mapAnalysisRow(row: AnalysisRow, dependencies: DependencyRow[]): AnalysisSnapshot {
+	const manifest = row.manifest_json
+		? parseJsonColumn<PackageJsonManifest>(row.manifest_json)
+		: undefined;
 	const stats = parseJsonColumn<DependencyStats>(row.stats_json);
 
 	return {
@@ -455,7 +517,8 @@ function mapAnalysisRow(
 			id: row.project_id,
 			slug: row.project_slug,
 			name: row.project_name,
-			ecosystem: row.project_ecosystem
+			ecosystem: row.project_ecosystem,
+			ownerUserId: row.project_owner_user_id ?? undefined
 		},
 		status: row.status,
 		manifestName: row.manifest_name ?? undefined,
@@ -470,6 +533,7 @@ function mapAnalysisRow(
 		callbackPayload: row.callback_payload_json
 			? parseJsonColumn<N8nAnalysisCallback>(row.callback_payload_json)
 			: undefined,
+		slackNotification: mapSlackNotificationColumn(row.slack_notification_json),
 		renderedSummaryHtml: row.summary_html ?? undefined,
 		errorMessage: row.error_message ?? undefined,
 		webhookResponse: row.webhook_response_json
@@ -524,6 +588,16 @@ function parseJsonColumn<T>(value: unknown): T {
 	}
 
 	return value as T;
+}
+
+function mapSlackNotificationColumn(value: unknown) {
+	if (value == null) {
+		return undefined;
+	}
+
+	const parsed = parseJsonColumn<SlackNotificationResult | null>(value);
+
+	return parsed ?? undefined;
 }
 
 function toIsoString(value: Date | string): string {

@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
 
-
 import type {
 	AnalysisSnapshot,
 	ConfidenceLevel,
@@ -17,6 +16,7 @@ import type {
 	SourceLabel,
 	UpgradePhase
 } from '$lib/server/analysis/types';
+import { buildAnalysisUrl } from '$lib/server/app-url';
 import { enrichManifestDependencies } from '$lib/server/npm/client';
 import {
 	applyCallback,
@@ -24,6 +24,7 @@ import {
 	getAnalysisById,
 	getLatestManifestByProject,
 	getProjectById,
+	getProjectByOwnerAndSlug,
 	markAnalysisFailed,
 	markAnalysisFailedIfPending,
 	markAnalysisWebhookAccepted,
@@ -32,6 +33,8 @@ import {
 } from '$lib/server/analysis/repository';
 import { sendAnalysisToN8n } from '$lib/server/n8n/client';
 import { parsePackageJsonText } from '$lib/server/package-json/manifest';
+import { resolveSlackNotificationContext } from '$lib/server/slack/service';
+import type { SlackNotificationContext, SlackNotificationResult } from '$lib/server/slack/types';
 
 const MAX_N8N_CANDIDATES = 24;
 const ANALYSIS_TIMEOUTS_MS = {
@@ -43,18 +46,29 @@ const ANALYSIS_TIMEOUT_MESSAGE = 'El análisis excedió el tiempo máximo de esp
 
 export async function startUploadedAnalysis(input: {
 	parsedManifest: ParsedPackageManifest;
+	requestedByUserId: string;
+	requestedByUserName: string;
 	projectIdOverride?: string;
 }): Promise<{ analysisId: string }> {
 	const analysisId = `analysis_${crypto.randomUUID()}`;
 	const project = await resolveProjectIdentity({
 		analysisId,
 		projectIdOverride: input.projectIdOverride,
-		projectName: input.parsedManifest.projectName
+		projectName: input.parsedManifest.projectName,
+		ownerUserId: input.requestedByUserId
+	});
+	const analysisUrl = buildAnalysisUrl(analysisId);
+	const notificationContext = await resolveSlackNotificationContext({
+		projectId: project.id,
+		requestedByUserId: input.requestedByUserId,
+		requestedByUserName: input.requestedByUserName
 	});
 	const initialStats = buildInitialStats(input.parsedManifest.dependencies.length);
 	const initialRequestPayload = buildN8nAnalysisRequest({
 		analysisId,
 		projectName: project.name,
+		analysisUrl,
+		notificationContext,
 		stats: initialStats,
 		candidates: []
 	});
@@ -68,14 +82,17 @@ export async function startUploadedAnalysis(input: {
 		initialRequestPayload
 	});
 
-
 	try {
 		await setAnalysisStatus(analysisId, 'enriching');
 
-		const { dependencies, stats } = await enrichManifestDependencies(input.parsedManifest.dependencies);
+		const { dependencies, stats } = await enrichManifestDependencies(
+			input.parsedManifest.dependencies
+		);
 		const requestPayload = buildN8nAnalysisRequest({
 			analysisId,
 			projectName: project.name,
+			analysisUrl,
+			notificationContext,
 			stats,
 			candidates: dependencies.map(stripDependencyForN8n)
 		});
@@ -91,9 +108,7 @@ export async function startUploadedAnalysis(input: {
 		await markAnalysisWebhookAccepted(analysisId, response);
 	} catch (error) {
 		const message =
-			error instanceof Error
-				? error.message
-				: 'No se pudo completar el análisis del package.json.';
+			error instanceof Error ? error.message : 'No se pudo completar el análisis del package.json.';
 		await markAnalysisFailed(analysisId, message);
 	}
 
@@ -120,6 +135,8 @@ export async function startReanalysisFromProject(projectId: string) {
 
 	return startUploadedAnalysis({
 		parsedManifest,
+		requestedByUserId: project.ownerUserId ?? 'system',
+		requestedByUserName: 'Sistema',
 		projectIdOverride: project.id
 	});
 }
@@ -143,7 +160,6 @@ export async function getAnalysisSnapshot(id: string): Promise<AnalysisSnapshot 
 	return getAnalysisById(id);
 }
 
-
 export async function persistN8nCallback(
 	idempotencyKey: string,
 	payload: N8nAnalysisCallback,
@@ -161,10 +177,7 @@ export async function failAnalysisFromInvalidN8nCallback(value: unknown, errorMe
 		return false;
 	}
 
-	return markAnalysisFailedIfPending(
-		analysisId,
-		`n8n envió un callback inválido: ${errorMessage}`
-	);
+	return markAnalysisFailedIfPending(analysisId, `n8n envió un callback inválido: ${errorMessage}`);
 }
 
 export function parseN8nCallbackPayload(value: unknown): N8nAnalysisCallback {
@@ -179,6 +192,7 @@ export function parseN8nCallbackPayload(value: unknown): N8nAnalysisCallback {
 			upgradePlan: [],
 			packageBriefs: [],
 			slackDigestMd: undefined,
+			slackNotification: asSlackNotification(record.slackNotification),
 			sources: []
 		};
 	}
@@ -190,6 +204,7 @@ export function parseN8nCallbackPayload(value: unknown): N8nAnalysisCallback {
 		upgradePlan: asUpgradePlanArray(record.upgradePlan),
 		packageBriefs: asPackageBriefArray(record.packageBriefs),
 		slackDigestMd: asUndefinedOrString(record.slackDigestMd),
+		slackNotification: asSlackNotification(record.slackNotification),
 		sources: asSourceArray(record.sources)
 	};
 }
@@ -198,6 +213,7 @@ function resolveProjectIdentity(input: {
 	analysisId: string;
 	projectName?: string;
 	projectIdOverride?: string;
+	ownerUserId: string;
 }): Promise<ProjectSnapshot> | ProjectSnapshot {
 	if (input.projectIdOverride) {
 		return getProjectById(input.projectIdOverride).then((project) => {
@@ -215,12 +231,22 @@ function resolveProjectIdentity(input: {
 	const projectName = input.projectName ?? `upload-${input.analysisId.slice(-8)}`;
 	const slug = slugify(projectName);
 
-	return {
-		id: `project_${slug}`,
-		slug,
-		name: projectName,
-		ecosystem: 'npm'
-	};
+	return getProjectByOwnerAndSlug(input.ownerUserId, slug).then((existingProject) => {
+		if (existingProject) {
+			return {
+				...existingProject,
+				name: projectName
+			};
+		}
+
+		return {
+			id: `project_${crypto.randomUUID()}`,
+			slug,
+			name: projectName,
+			ecosystem: 'npm',
+			ownerUserId: input.ownerUserId
+		};
+	});
 }
 
 function buildInitialStats(total: number): DependencyStats {
@@ -237,12 +263,15 @@ function buildInitialStats(total: number): DependencyStats {
 function buildN8nAnalysisRequest(input: {
 	analysisId: string;
 	projectName: string;
+	analysisUrl?: string;
+	notificationContext: SlackNotificationContext;
 	stats: DependencyStats;
 	candidates: DependencyCandidate[];
 }): N8nAnalysisRequest {
 	return {
 		analysisId: input.analysisId,
 		projectName: input.projectName,
+		analysisUrl: input.analysisUrl,
 		dependencyStats: {
 			total: input.stats.total,
 			outdated: input.stats.outdated,
@@ -257,11 +286,16 @@ function buildN8nAnalysisRequest(input: {
 					candidate.resolution.requiresManualReview
 			)
 			.sort((left, right) => right.riskScore - left.riskScore)
-			.slice(0, MAX_N8N_CANDIDATES)
+			.slice(0, MAX_N8N_CANDIDATES),
+		notificationContext: {
+			slack: input.notificationContext
+		}
 	};
 }
 
-function stripDependencyForN8n(dependency: AnalysisSnapshot['dependencies'][number]): DependencyCandidate {
+function stripDependencyForN8n(
+	dependency: AnalysisSnapshot['dependencies'][number]
+): DependencyCandidate {
 	return {
 		name: dependency.name,
 		currentVersion: dependency.currentVersion,
@@ -328,6 +362,22 @@ function asString(value: unknown, fieldName: string): string {
 	return value;
 }
 
+function asOptionalStringField(value: unknown, fieldName: string) {
+	if (value == null) {
+		return undefined;
+	}
+
+	return asString(value, fieldName);
+}
+
+function asBoolean(value: unknown, fieldName: string) {
+	if (typeof value !== 'boolean') {
+		throw new Error(`El campo ${fieldName} debe ser booleano.`);
+	}
+
+	return value;
+}
+
 function asOptionalString(value: unknown): string {
 	if (value == null) {
 		return '';
@@ -342,6 +392,24 @@ function asUndefinedOrString(value: unknown): string | undefined {
 	}
 
 	return asString(value, 'slackDigestMd');
+}
+
+function asSlackNotification(value: unknown): SlackNotificationResult | undefined {
+	if (value == null) {
+		return undefined;
+	}
+
+	const record = asRecord(value, 'slackNotification');
+
+	return {
+		enabled: asBoolean(record.enabled, 'slackNotification.enabled'),
+		attempted: asBoolean(record.attempted, 'slackNotification.attempted'),
+		status: asSlackNotificationStatus(record.status),
+		channelId: asOptionalStringField(record.channelId, 'slackNotification.channelId'),
+		channelName: asOptionalStringField(record.channelName, 'slackNotification.channelName'),
+		reason: asOptionalStringField(record.reason, 'slackNotification.reason'),
+		notifiedAt: asOptionalStringField(record.notifiedAt, 'slackNotification.notifiedAt')
+	};
 }
 
 function asFailureSummary(record: Record<string, unknown>) {
@@ -517,4 +585,12 @@ function asNumber(value: unknown, fieldName: string): number {
 	}
 
 	return value;
+}
+
+function asSlackNotificationStatus(value: unknown): SlackNotificationResult['status'] {
+	if (value === 'sent' || value === 'skipped' || value === 'failed') {
+		return value;
+	}
+
+	throw new Error('El campo slackNotification.status debe ser sent, skipped o failed.');
 }

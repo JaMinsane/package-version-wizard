@@ -3,21 +3,17 @@
 	import type { SubmitFunction } from '@sveltejs/kit';
 
 	import { readinessItemDefinitions } from '$lib/ui/home/content';
-	import type { EnvironmentReadiness, HomeFormValues } from '$lib/ui/home/types';
+	import type { EnvironmentReadiness } from '$lib/ui/home/types';
 
 	interface Props {
 		environmentReady: EnvironmentReadiness;
 		formMessage?: string;
-		initialValues: HomeFormValues;
 	}
 
-	let { environmentReady, formMessage, initialValues }: Props = $props();
+	let { environmentReady, formMessage }: Props = $props();
 
 	let isSubmitting = $state(false);
 	let selectedFileName = $state('');
-	let subscribeSlack = $state(false);
-	let slackChannelTarget = $state('');
-	let slackFrequency = $state<HomeFormValues['slackFrequency']>('daily');
 	let showReadiness = $state(false);
 
 	const analysisReady = $derived(
@@ -32,12 +28,6 @@
 			ready: environmentReady[item.key]
 		}))
 	);
-
-	$effect(() => {
-		subscribeSlack = initialValues.subscribeSlack;
-		slackChannelTarget = initialValues.slackChannelTarget;
-		slackFrequency = initialValues.slackFrequency;
-	});
 
 	const enhanceUpload: SubmitFunction = () => {
 		isSubmitting = true;
@@ -72,10 +62,12 @@
 		<div class="flex flex-wrap items-start justify-between gap-4">
 			<div class="max-w-2xl">
 				<p class="section-label">Entrada</p>
-				<h2 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">Inicia una corrida nueva</h2>
+				<h2 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+					Inicia una corrida nueva
+				</h2>
 				<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)] sm:text-base">
-					El formulario mantiene la experiencia simple, pero la salida queda preparada para revisión
-					técnica, seguimiento y automatización.
+					El formulario mantiene la experiencia simple. La configuración de Slack vive aparte y el
+					análisis conserva una salida limpia, persistida y compartible.
 				</p>
 			</div>
 
@@ -88,7 +80,9 @@
 					aria-controls="environment-panel"
 					onclick={toggleReadiness}
 				>
-					<span class="inline-block h-2 w-2 rounded-full bg-[var(--neon-green)] shadow-[0_0_6px_var(--neon-green)]"></span>
+					<span
+						class="inline-block h-2 w-2 rounded-full bg-[var(--neon-green)] shadow-[0_0_6px_var(--neon-green)]"
+					></span>
 					Estado del stack
 				</button>
 			</div>
@@ -124,10 +118,14 @@
 			use:enhance={enhanceUpload}
 			class="mt-6 grid gap-5 xl:grid-cols-[1.14fr_0.86fr]"
 		>
-			<div class="rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.5)] p-5 sm:p-6">
+			<div
+				class="rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.5)] p-5 sm:p-6"
+			>
 				<div class="flex items-start justify-between gap-4">
 					<div>
-						<p class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted-relaxed)]">Archivo</p>
+						<p class="text-xs font-bold tracking-widest text-[var(--text-muted-relaxed)] uppercase">
+							Archivo
+						</p>
 						<h3 class="mt-3 text-xl font-bold text-white">package.json</h3>
 						<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
 							Sube el manifiesto principal del proyecto. La app lo valida y prepara la corrida sin
@@ -137,7 +135,9 @@
 					<span class="neon-badge neon-badge--cyan">Límite 1 MB</span>
 				</div>
 
-				<div class="mt-6 rounded-lg border border-dashed border-[var(--neon-green)]/30 bg-[rgba(10,10,15,0.8)] p-5">
+				<div
+					class="mt-6 rounded-lg border border-dashed border-[var(--neon-green)]/30 bg-[rgba(10,10,15,0.8)] p-5"
+				>
 					<input
 						id="packageJson"
 						name="packageJson"
@@ -147,79 +147,48 @@
 						onchange={handleFileSelection}
 						required
 					/>
-					<p class="mt-4 data-cell text-sm text-[var(--text-muted-relaxed)]">
-						<span class="text-[var(--neon-green)] mr-2">{'>'}</span>{selectedFileName || 'Elige el archivo que quieres analizar.'}
+					<p class="data-cell mt-4 text-sm text-[var(--text-muted-relaxed)]">
+						<span class="mr-2 text-[var(--neon-green)]">{'>'}</span>{selectedFileName ||
+							'Elige el archivo que quieres analizar.'}
 					</p>
 				</div>
 			</div>
 
-			<div class="rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.5)] p-5 sm:p-6">
+			<div
+				class="rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.5)] p-5 sm:p-6"
+			>
 				<div class="flex items-start justify-between gap-4">
 					<div>
-						<p class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted-relaxed)]">Automatización</p>
-						<h3 class="mt-3 text-xl font-bold text-white">Radar por Slack</h3>
+						<p class="text-xs font-bold tracking-widest text-[var(--text-muted-relaxed)] uppercase">
+							Notificaciones
+						</p>
+						<h3 class="mt-3 text-xl font-bold text-white">Slack opcional</h3>
 						<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-							Opcional. Deja conectado el proyecto para observar cambios relevantes después de esta
-							primera corrida.
+							El análisis no depende de Slack. Si quieres notificaciones finales, conéctalo desde
+							settings y luego ajusta el canal por proyecto en la vista del análisis.
 						</p>
 					</div>
-					<label class="neon-badge neon-badge--green cursor-pointer">
-						<input
-							name="subscribeSlack"
-							type="checkbox"
-							bind:checked={subscribeSlack}
-							class="rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
-						/>
-						Activar
-					</label>
-				</div>
-
-				<div class="mt-6 grid gap-4">
-					<label class="block">
-						<span class="text-xs font-bold uppercase tracking-widest text-[var(--text-dim)]">
-							Canal o destino
-						</span>
-						<input
-							name="slackChannelTarget"
-							type="text"
-							placeholder="#platform-upgrades"
-							bind:value={slackChannelTarget}
-							class="mt-2 w-full"
-						/>
-					</label>
-
-					<label class="block">
-						<span class="text-xs font-bold uppercase tracking-widest text-[var(--text-dim)]">
-							Frecuencia
-						</span>
-						<select
-							name="slackFrequency"
-							bind:value={slackFrequency}
-							class="mt-2 w-full"
-						>
-							<option value="daily">Diario</option>
-							<option value="weekdays">Lunes a viernes</option>
-							<option value="twice_daily">Dos veces al día</option>
-						</select>
-					</label>
+					<a href="/settings/integrations/slack" class="neon-badge neon-badge--green">
+						Configurar
+					</a>
 				</div>
 
 				<div class="data-cell mt-6">
-					<p class="text-xs font-bold uppercase tracking-widest text-[var(--text-dim)]">Salida esperada</p>
+					<p class="text-xs font-bold tracking-widest text-[var(--text-dim)] uppercase">
+						Salida esperada
+					</p>
 					<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-						La corrida devuelve progreso persistido, dependencias priorizadas, brief renderizado y
-						un punto de partida claro para el siguiente paso.
+						La corrida devuelve progreso persistido, dependencias priorizadas, brief renderizado y,
+						si Slack está activo, un mensaje final con deep link al análisis completo.
 					</p>
 				</div>
 			</div>
 
 			<div class="xl:col-span-2">
-				<button
-					type="submit"
-					class="neon-button w-full"
-					disabled={!analysisReady || isSubmitting}
-				>
-					<span class={`inline-block h-2.5 w-2.5 rounded-full bg-[#0a0a0f] ${isSubmitting ? 'animate-pulse' : ''}`}></span>
+				<button type="submit" class="neon-button w-full" disabled={!analysisReady || isSubmitting}>
+					<span
+						class={`inline-block h-2.5 w-2.5 rounded-full bg-[#0a0a0f] ${isSubmitting ? 'animate-pulse' : ''}`}
+					></span>
 					{isSubmitting ? 'Preparando análisis...' : '[ ANALIZAR PACKAGE.JSON ]'}
 				</button>
 

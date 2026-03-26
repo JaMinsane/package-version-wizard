@@ -1,23 +1,16 @@
 <script lang="ts">
 	import UploadStudio from '$lib/components/home/UploadStudio.svelte';
-	import type { HomeFormValues } from '$lib/ui/home/types';
 
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
-
-	const initialValues = $derived<HomeFormValues>({
-		subscribeSlack: Boolean((form as { values?: Partial<HomeFormValues> })?.values?.subscribeSlack),
-		slackChannelTarget: (form as { values?: Partial<HomeFormValues> })?.values?.slackChannelTarget ?? '',
-		slackFrequency: (form as { values?: Partial<HomeFormValues> })?.values?.slackFrequency ?? 'daily'
-	});
 </script>
 
 <svelte:head>
 	<title>Subir package.json | Package Version Wizard</title>
 	<meta
 		name="description"
-		content="Sube tu package.json para iniciar un análisis de dependencias con brief AI y automatización continua."
+		content="Sube tu package.json para iniciar un análisis de dependencias con brief AI y notificación final opcional en Slack."
 	/>
 </svelte:head>
 
@@ -29,15 +22,11 @@
 				Sube tu manifiesto
 			</h1>
 			<p class="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[var(--text-muted-relaxed)]">
-				Carga tu <code class="text-[var(--neon-green)]">package.json</code> para iniciar el análisis
-				de dependencias, obtener un brief AI y configurar automatización continua.
+				Carga tu <code class="text-[var(--neon-green)]">package.json</code> para iniciar el análisis de
+				dependencias, obtener un brief AI y publicar el resultado final en Slack si lo tienes configurado.
 			</p>
 		</div>
 
-		<UploadStudio
-			environmentReady={data.environmentReady}
-			formMessage={form?.message}
-			{initialValues}
-		/>
+		<UploadStudio environmentReady={data.environmentReady} formMessage={form?.message} />
 	</div>
 </div>

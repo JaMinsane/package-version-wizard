@@ -15,12 +15,16 @@
 	];
 </script>
 
-<header class="fixed top-0 left-0 right-0 z-50 border-b border-[var(--border-green)] bg-[rgba(10,10,15,0.85)] backdrop-blur-xl">
+<header
+	class="fixed top-0 right-0 left-0 z-50 border-b border-[var(--border-green)] bg-[rgba(10,10,15,0.85)] backdrop-blur-xl"
+>
 	<nav class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6">
 		<!-- Left: Logo / status -->
-		<a href="/" class="flex items-center gap-2.5 shrink-0">
+		<a href="/" class="flex shrink-0 items-center gap-2.5">
 			<span class="neon-badge neon-badge--green flex items-center gap-1.5">
-				<span class="inline-block h-2 w-2 rounded-full bg-[var(--neon-green)] shadow-[0_0_6px_var(--neon-green)]"></span>
+				<span
+					class="inline-block h-2 w-2 rounded-full bg-[var(--neon-green)] shadow-[0_0_6px_var(--neon-green)]"
+				></span>
 				ready
 			</span>
 			<span class="text-xs font-medium text-[var(--text-foreground)]">
@@ -49,6 +53,14 @@
 				>
 					<span class="text-[var(--neon-green)]">$ run</span>
 					<span class="text-[var(--text-muted-relaxed)]">/analyze</span>
+				</a>
+				<a
+					href="/settings/integrations/slack"
+					class="nav-link"
+					class:nav-link--active={$page.url.pathname.startsWith('/settings/integrations/slack')}
+				>
+					<span class="text-[var(--neon-green)]">$ open</span>
+					<span class="text-[var(--text-muted-relaxed)]">/slack</span>
 				</a>
 			{/if}
 		</div>
