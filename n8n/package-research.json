@@ -265,29 +265,6 @@
     },
     {
       "parameters": {
-        "model": "openai/gpt-oss-120b",
-        "options": {
-          "maxTokensToSample": 1400,
-          "temperature": 0.2
-        }
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
-      "typeVersion": 1,
-      "position": [
-        8624,
-        9648
-      ],
-      "id": "75bd6f89-c889-4785-8a41-1e57291c81c2",
-      "name": "Groq Chat Model",
-      "credentials": {
-        "groqApi": {
-          "id": "Z1d7AmcF6EvlW8cq",
-          "name": "Groq API"
-        }
-      }
-    },
-    {
-      "parameters": {
         "schemaType": "manual",
         "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"summary\": {\n      \"type\": \"string\"\n    },\n    \"breakingChanges\": {\n      \"type\": \"array\",\n      \"maxItems\": 3,\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"testFocus\": {\n      \"type\": \"array\",\n      \"maxItems\": 3,\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"recommendedActions\": {\n      \"type\": \"array\",\n      \"maxItems\": 3,\n      \"items\": {\n        \"type\": \"string\"\n      }\n    }\n  },\n  \"required\": [\n    \"summary\",\n    \"breakingChanges\",\n    \"testFocus\",\n    \"recommendedActions\"\n  ]\n}\n",
         "autoFix": true,
@@ -455,6 +432,28 @@
         "githubApi": {
           "id": "tQguFU1WHwf0i6hf",
           "name": "GitHub account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite-preview",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        8640,
+        9696
+      ],
+      "id": "6b2255d0-079b-4cf2-8b6d-0ee08052e849",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "lplcQhz41qHiTqeQ",
+          "name": "Google Gemini(PaLM) Api account"
         }
       }
     }
@@ -631,22 +630,6 @@
         ]
       ]
     },
-    "Groq Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Basic LLM Chain",
-            "type": "ai_languageModel",
-            "index": 0
-          },
-          {
-            "node": "Structured Output Parser",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Structured Output Parser": {
       "ai_outputParser": [
         [
@@ -722,6 +705,22 @@
           {
             "node": "GitHub releases",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
             "index": 0
           }
         ]

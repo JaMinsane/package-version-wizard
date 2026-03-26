@@ -182,7 +182,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://hackaton.jamesjh.top/api/internal/n8n/callback",
+        "url": "=https://hackathon.jamesjh.top/api/internal/n8n/callback",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -218,12 +218,12 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Genera el brief final del proyecto a partir de la investigación consolidada.\n\nObjetivos:\n- executiveSummaryMd: resumir el estado general del upgrade, la cobertura de evidencia, los focos de riesgo y la estrategia recomendada.\n- upgradePlan: secuenciar el trabajo en fases ejecutables para developers.\n- slackDigestMd: producir un digest corto, accionable y compartible.\n- sources: reutilizar solo fuentes de la entrada.\n\nCómo sintetizar:\n- analysisId debe coincidir exactamente con el analysisId de entrada.\n- status debe ser siempre \"completed\".\n- Usa packageBriefs como base factual y no vuelvas a investigar.\n- dependencyStats.outdated y actionablePackages representan cambios reales en package.json.\n- Usa coveredByRangePackages y alignedPackages para mencionar dependencias ya cubiertas o alineadas; no las llames desactualizadas.\n- Usa manualReviewPackages para separar explícitamente la revisión manual de los upgrades reales.\n- Da más peso a packageBriefs con evidenceStatus verified.\n- Usa partialPackages y nonePackages para calibrar el nivel de cautela.\n- Si existe mezcla de upgrades simples y cambios potencialmente disruptivos, separa la ejecución por fases.\n- Diferencia con claridad quick wins frente a high risk.\n- Si la cobertura verificada es limitada, dilo explícitamente y propone validación adicional antes de merges amplios.\n\nQué no hacer:\n- No inventes paquetes o fuentes.\n- No conviertas incertidumbre en afirmaciones tajantes.\n- No repitas cada packageBrief casi textual; sintetiza y prioriza.\n- No uses el texto visible \"wave\"; usa \"Fase\" en títulos y narrativa.\n- No metas coveredByRangePackages ni alignedPackages en el upgradePlan salvo como contexto narrativo.\n\nEntrada:\n{{ JSON.stringify({\n  analysisId: $json.analysisId,\n  projectName: $json.projectName,\n  dependencyStats: $json.dependencyStats,\n  quickWins: $json.quickWins,\n  highRisk: $json.highRisk,\n  actionablePackages: $json.actionablePackages,\n  coveredByRangePackages: $json.coveredByRangePackages,\n  alignedPackages: $json.alignedPackages,\n  manualReviewPackages: $json.manualReviewPackages,\n  evidenceCoverage: $json.evidenceCoverage,\n  verifiedPackages: $json.verifiedPackages,\n  partialPackages: $json.partialPackages,\n  nonePackages: $json.nonePackages,\n  packageBriefs: $json.packageBriefs,\n  sources: $json.sources\n}, null, 2) }}\n",
+        "text": "=Genera el brief final del proyecto a partir de la investigación consolidada.\n\nObjetivos:\n- executiveSummaryMd: resumir el estado general del upgrade, la cobertura de evidencia, los focos de riesgo y la estrategia recomendada.\n- upgradePlan: secuenciar el trabajo en fases ejecutables para developers.\n- slackDigestMd: producir un digest corto, accionable y compartible.\n- sources: reutilizar solo fuentes de la entrada.\n\nCómo sintetizar:\n- analysisId debe coincidir exactamente con el analysisId de entrada.\n- status debe ser siempre \"completed\".\n- Usa packageBriefs como base factual y no vuelvas a investigar.\n- dependencyStats.outdated y actionablePackages representan cambios reales en package.json.\n- Usa coveredByRangePackages y alignedPackages para mencionar dependencias ya cubiertas o alineadas; no las llames desactualizadas.\n- Usa manualReviewPackages para separar explícitamente la revisión manual de los upgrades reales.\n- Da más peso a packageBriefs con evidenceStatus verified.\n- Usa partialPackages y nonePackages para calibrar el nivel de cautela.\n- Si existe mezcla de upgrades simples y cambios potencialmente disruptivos, separa la ejecución por fases.\n- Diferencia con claridad quick wins frente a high risk.\n- Si la cobertura verificada es limitada, dilo explícitamente y propone validación adicional antes de merges amplios.\n\nQué no hacer:\n- No inventes paquetes o fuentes.\n- No conviertas incertidumbre en afirmaciones tajantes.\n- No repitas cada packageBrief casi textual; sintetiza y prioriza.\n- No metas coveredByRangePackages ni alignedPackages en el upgradePlan salvo como contexto narrativo.\n\nEntrada:\n{{ JSON.stringify({\n  analysisId: $json.analysisId,\n  projectName: $json.projectName,\n  dependencyStats: $json.dependencyStats,\n  quickWins: $json.quickWins,\n  highRisk: $json.highRisk,\n  actionablePackages: $json.actionablePackages,\n  coveredByRangePackages: $json.coveredByRangePackages,\n  alignedPackages: $json.alignedPackages,\n  manualReviewPackages: $json.manualReviewPackages,\n  evidenceCoverage: $json.evidenceCoverage,\n  verifiedPackages: $json.verifiedPackages,\n  partialPackages: $json.partialPackages,\n  nonePackages: $json.nonePackages,\n  packageBriefs: $json.packageBriefs,\n  sources: $json.sources\n}, null, 2) }}\n",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
             {
-              "message": "Eres un analista senior de upgrades para dependencias npm.\n\nDevuelve exclusivamente datos que cumplan el schema del output parser.\nTodo el texto orientado al usuario debe estar principalmente en español técnico natural, permitiendo anglicismos comunes entre programadores cuando mejoren la claridad.\n\nCampos que deben salir en español:\n- executiveSummaryMd\n- upgradePlan.title\n- upgradePlan.rationale\n- slackDigestMd\n\nCampos fijos:\n- analysisId debe coincidir exactamente con el analysisId de entrada.\n- status debe ser siempre \"completed\".\n\nTerminología:\n- Usa \"Fase 1\", \"Fase 2\", etc. en el texto visible.\n- El campo JSON técnico sigue llamándose wave y debe ser un entero correlativo.\n- No uses \"wave\", \"waves\", \"onda\" u \"olas\" dentro del texto final.\n- Puedes mantener anglicismos comunes como upgrade, deprecated, breaking changes, quick wins y heavy lifts cuando mejoren la claridad.\n- No traduzcas nombres de paquetes, versiones, identificadores de código, URLs, nombres de archivos ni texto técnico dentro de backticks.\n\nRol:\n- Actúa como sintetizador y priorizador del proyecto, no como re-investigador por paquete.\n- Usa packageBriefs como base factual.\n- No reescribas ni alteres el contenido factual de packageBriefs.\n\nReglas de precisión:\n- No inventes paquetes, fuentes, breaking changes, riesgos ni URLs.\n- Los claims fuertes solo pueden apoyarse en packageBriefs con evidenceStatus verified.\n- Si la evidencia es partial o none, dilo explícitamente y evita lenguaje tajante.\n- No agregues sources fuera de la lista de sources de entrada.\n- Nunca llames desactualizada a una dependencia presente en coveredByRangePackages o alignedPackages.\n- Trata manualReviewPackages como trabajo de revisión manual, no como upgrade directo confirmado.\n- No conviertas incertidumbre en una recomendación de merge agresiva.\n\nReglas de estilo:\n- executiveSummaryMd debe ser narrativo, técnico y útil; no una lista plana.\n- Puedes usar Markdown dentro de executiveSummaryMd y slackDigestMd.\n- Resalta en negrita números o datos especialmente relevantes si mejora la legibilidad.\n- No devuelvas HTML.\n- slackDigestMd debe ser breve, claro y listo para compartir.\n\nReglas de priorización:\n- Separa quick wins, high risk, manual review y paquetes ya cubiertos por el spec cuando sea relevante.\n- Prioriza actionablePackages, paquetes deprecated, cambios major y dependencias con mayor riskScore.\n- Usa evidenceCoverage, verifiedPackages, partialPackages y nonePackages para calibrar la confianza del plan.\n- Si la cobertura verified es baja, recomiéndalo explícitamente antes de merges amplios.\n- Si hay paquetes con evidenceStatus none, trátalos como validación obligatoria antes de tocar áreas críticas.\n- Usa coveredByRangePackages y alignedPackages solo como contexto no accionable; no los conviertas en backlog de upgrade.\n\nReglas para upgradePlan:\n- Debe tener entre 2 y 4 fases realistas.\n- Cada fase debe tener un objetivo claro y un rationale accionable.\n- Agrupa paquetes de forma coherente, no arbitraria.\n- Limita upgradePlan.packages a actionablePackages y manualReviewPackages cuando haya trabajo real.\n- Evita duplicar el mismo paquete en varias fases salvo necesidad clara.\n- La secuencia debe sentirse ejecutable por un equipo técnico real.\n"
+              "message": "Eres un analista senior de upgrades para dependencias npm.\n\nDevuelve exclusivamente datos que cumplan el schema del output parser.\nTodo el texto orientado al usuario debe estar principalmente en español técnico natural, permitiendo anglicismos comunes entre programadores cuando mejoren la claridad.\n\nCampos que deben salir en español:\n- executiveSummaryMd\n- upgradePlan.title\n- upgradePlan.rationale\n- slackDigestMd\n\nCampos fijos:\n- analysisId debe coincidir exactamente con el analysisId de entrada.\n- status debe ser siempre \"completed\".\n\nTerminología:\n- Usa \"Fase 1\", \"Fase 2\", etc. en el texto visible.\n- El campo JSON técnico sigue llamándose wave y debe ser un entero correlativo.\n- No uses \"wave\", \"waves\", \"onda\" u \"olas\" dentro del texto final.\n- Puedes mantener anglicismos comunes como upgrade, deprecated, breaking changes, quick wins y heavy lifts cuando mejoren la claridad.\n- No traduzcas nombres de paquetes, versiones, identificadores de código, URLs, nombres de archivos ni texto técnico dentro de backticks.\n- Usa una terminología consistente para una audiencia de developers hispanohablantes. Es recomendable usar anglicismos comunes entre programadores cuando mejoren la claridad.\n\nRol:\n- Actúa como sintetizador y priorizador del proyecto, no como re-investigador por paquete.\n- Usa packageBriefs como base factual.\n- No reescribas ni alteres el contenido factual de packageBriefs.\n\nReglas de precisión:\n- No inventes paquetes, fuentes, breaking changes, riesgos ni URLs.\n- Los claims fuertes solo pueden apoyarse en packageBriefs con evidenceStatus verified.\n- Si la evidencia es partial o none, dilo explícitamente y evita lenguaje tajante.\n- No agregues sources fuera de la lista de sources de entrada.\n- Nunca llames desactualizada a una dependencia presente en coveredByRangePackages o alignedPackages.\n- Trata manualReviewPackages como trabajo de revisión manual, no como upgrade directo confirmado.\n- No conviertas incertidumbre en una recomendación de merge agresiva.\n\nReglas de estilo:\n- executiveSummaryMd debe ser narrativo, técnico y útil; no una lista plana.\n- Puedes usar Markdown dentro de executiveSummaryMd y slackDigestMd.\n- Resalta en negrita números o datos especialmente relevantes si mejora la legibilidad.\n- No devuelvas HTML.\n- slackDigestMd debe ser breve, claro y listo para compartir.\n\nReglas de priorización:\n- Separa quick wins, high risk, manual review y paquetes ya cubiertos por el spec cuando sea relevante.\n- Prioriza actionablePackages, paquetes deprecated, cambios major y dependencias con mayor riskScore.\n- Usa evidenceCoverage, verifiedPackages, partialPackages y nonePackages para calibrar la confianza del plan.\n- Si la cobertura verified es baja, recomiéndalo explícitamente antes de merges amplios.\n- Si hay paquetes con evidenceStatus none, trátalos como validación obligatoria antes de tocar áreas críticas.\n- Usa coveredByRangePackages y alignedPackages solo como contexto no accionable; no los conviertas en backlog de upgrade.\n\nReglas para upgradePlan:\n- Debe tener entre 2 y 4 fases realistas.\n- Cada fase debe tener un objetivo claro y un rationale accionable.\n- Agrupa paquetes de forma coherente, no arbitraria.\n- Limita upgradePlan.packages a actionablePackages y manualReviewPackages cuando haya trabajo real.\n- Evita duplicar el mismo paquete en varias fases salvo necesidad clara.\n- La secuencia debe sentirse ejecutable por un equipo técnico real.\n"
             }
           ]
         },
@@ -241,29 +241,6 @@
     },
     {
       "parameters": {
-        "model": "openai/gpt-oss-120b",
-        "options": {
-          "maxTokensToSample": 3000,
-          "temperature": 0.2
-        }
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
-      "typeVersion": 1,
-      "position": [
-        -1728,
-        2848
-      ],
-      "id": "2118a99e-b0f9-448d-b278-05c0fb2bb484",
-      "name": "Groq Chat Model",
-      "credentials": {
-        "groqApi": {
-          "id": "Z1d7AmcF6EvlW8cq",
-          "name": "Groq API"
-        }
-      }
-    },
-    {
-      "parameters": {
         "schemaType": "manual",
         "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"analysisId\": {\n      \"type\": \"string\"\n    },\n    \"status\": {\n      \"type\": \"string\",\n      \"enum\": [\"completed\"]\n    },\n    \"executiveSummaryMd\": {\n      \"type\": \"string\"\n    },\n    \"upgradePlan\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"properties\": {\n          \"wave\": {\n            \"type\": \"integer\"\n          },\n          \"title\": {\n            \"type\": \"string\"\n          },\n          \"rationale\": {\n            \"type\": \"string\"\n          },\n          \"packages\": {\n            \"type\": \"array\",\n            \"items\": {\n              \"type\": \"string\"\n            }\n          }\n        },\n        \"required\": [\"wave\", \"title\", \"rationale\", \"packages\"]\n      }\n    },\n    \"slackDigestMd\": {\n      \"type\": \"string\"\n    },\n    \"sources\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"properties\": {\n          \"packageName\": {\n            \"type\": \"string\"\n          },\n          \"label\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"npm\",\n              \"github-release\",\n              \"changelog\",\n              \"migration-guide\",\n              \"docs\",\n              \"fallback-search\",\n              \"repository\"\n            ]\n          },\n          \"url\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\"packageName\", \"label\", \"url\"]\n      }\n    }\n  },\n  \"required\": [\n    \"analysisId\",\n    \"status\",\n    \"executiveSummaryMd\",\n    \"upgradePlan\",\n    \"slackDigestMd\",\n    \"sources\"\n  ]\n}",
         "autoFix": true
@@ -276,6 +253,28 @@
       ],
       "id": "4e3320d1-8f0e-428a-af3b-e3fff02274e1",
       "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite-preview",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1744,
+        2880
+      ],
+      "id": "01a4d30a-b76e-4f06-942b-e2258c7b669c",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "lplcQhz41qHiTqeQ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
     }
   ],
   "connections": {
@@ -421,28 +420,28 @@
         ]
       ]
     },
-    "Groq Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Basic LLM Chain",
-            "type": "ai_languageModel",
-            "index": 0
-          },
-          {
-            "node": "Structured Output Parser",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Structured Output Parser": {
       "ai_outputParser": [
         [
           {
             "node": "Basic LLM Chain",
             "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
             "index": 0
           }
         ]
