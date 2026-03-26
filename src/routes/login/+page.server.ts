@@ -32,7 +32,7 @@ export const actions: Actions = {
 			if (error instanceof ZodError) {
 				return fail(400, {
 					action: 'login' as const,
-					message: error.errors[0]?.message ?? 'Datos inválidos.',
+					message: (error as ZodError).issues?.[0]?.message ?? 'Datos inválidos.',
 					values: { email }
 				});
 			}
@@ -67,7 +67,7 @@ export const actions: Actions = {
 			if (error instanceof ZodError) {
 				return fail(400, {
 					action: 'register' as const,
-					message: error.errors[0]?.message ?? 'Datos inválidos.',
+					message: (error as ZodError).issues?.[0]?.message ?? 'Datos inválidos.',
 					values: { name, email }
 				});
 			}

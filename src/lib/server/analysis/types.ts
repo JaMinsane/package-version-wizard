@@ -55,7 +55,6 @@ export type ConfidenceLevel = 'low' | 'medium' | 'high';
 
 export type EvidenceStatus = 'verified' | 'partial' | 'none';
 
-export type SlackFrequency = 'daily' | 'weekdays' | 'twice_daily';
 
 export interface DependencyStats {
 	total: number;
@@ -152,13 +151,6 @@ export interface ProjectSnapshot {
 	ecosystem: 'npm';
 }
 
-export interface SlackSubscriptionSnapshot {
-	channelType: 'slack';
-	channelTarget: string;
-	frequency: SlackFrequency;
-	enabled: boolean;
-	updatedAt: string;
-}
 
 export interface AnalysisSnapshot {
 	id: string;
@@ -181,7 +173,6 @@ export interface AnalysisSnapshot {
 		body?: string | null;
 	};
 	lastIdempotencyKey?: string;
-	subscription?: SlackSubscriptionSnapshot;
 }
 
 export interface PackageJsonManifest {
@@ -209,14 +200,3 @@ export interface ParsedPackageManifest {
 	dependencies: ManifestDependencyInput[];
 }
 
-export interface RadarSubscriptionRecord {
-	projectId: string;
-	projectName: string;
-	projectSlug: string;
-	channelType: 'slack';
-	channelTarget: string;
-	frequency: SlackFrequency;
-	latestAnalysisId?: string;
-	latestCompletedAnalysisId?: string;
-	latestCompletedAnalysisUrl?: string;
-}

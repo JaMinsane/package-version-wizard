@@ -9,10 +9,7 @@ import type {
 	N8nAnalysisCallback,
 	N8nAnalysisRequest,
 	PackageJsonManifest,
-	ProjectSnapshot,
-	RadarSubscriptionRecord,
-	SlackFrequency,
-	SlackSubscriptionSnapshot
+	ProjectSnapshot
 } from '$lib/server/analysis/types';
 
 type DatabaseClient = ReturnType<typeof getDb>;
@@ -54,30 +51,11 @@ interface DependencyRow {
 	resolution_json: unknown;
 }
 
-interface SubscriptionRow {
-	channel_type: 'slack';
-	channel_target: string;
-	frequency: SlackFrequency;
-	enabled: boolean;
-	updated_at: Date | string;
-}
-
 interface ProjectRow {
 	id: string;
 	slug: string;
 	name: string;
 	ecosystem: 'npm';
-}
-
-interface RadarSubscriptionRow {
-	project_id: string;
-	project_name: string;
-	project_slug: string;
-	channel_type: 'slack';
-	channel_target: string;
-	frequency: SlackFrequency;
-	latest_analysis_id: string | null;
-	latest_completed_analysis_id: string | null;
 }
 
 export interface ApplyCallbackResult {
@@ -282,21 +260,7 @@ export async function getAnalysisById(id: string): Promise<AnalysisSnapshot | nu
 		ORDER BY risk_score DESC, name ASC
 	`;
 
-	const subscriptionRows = await db<SubscriptionRow[]>`
-		SELECT
-			channel_type,
-			channel_target,
-			frequency,
-			enabled,
-			updated_at
-		FROM automation_subscriptions
-		WHERE project_id = ${analysisRow.project_id}
-			AND channel_type = 'slack'
-		ORDER BY updated_at DESC
-		LIMIT 1
-	`;
-
-	return mapAnalysisRow(analysisRow, dependencyRows, subscriptionRows[0]);
+	return mapAnalysisRow(analysisRow, dependencyRows);
 }
 
 export async function markAnalysisWebhookAccepted(
@@ -477,100 +441,10 @@ export async function getLatestManifestByProject(projectId: string) {
 	};
 }
 
-export async function saveSlackSubscription(input: {
-	projectId: string;
-	enabled: boolean;
-	channelTarget: string;
-	frequency: SlackFrequency;
-}) {
-	const db = getDb();
-
-	await db.begin(async (tx: DatabaseClient) => {
-		await tx`
-			UPDATE automation_subscriptions
-			SET
-				enabled = false,
-				updated_at = now()
-			WHERE project_id = ${input.projectId}
-				AND channel_type = 'slack'
-		`;
-
-		if (!input.channelTarget) {
-			return;
-		}
-
-		await tx`
-			INSERT INTO automation_subscriptions (
-				project_id,
-				channel_type,
-				channel_target,
-				enabled,
-				frequency
-			)
-			VALUES (
-				${input.projectId},
-				${'slack'},
-				${input.channelTarget},
-				${input.enabled},
-				${input.frequency}
-			)
-			ON CONFLICT (project_id, channel_type, channel_target)
-			DO UPDATE SET
-				enabled = EXCLUDED.enabled,
-				frequency = EXCLUDED.frequency,
-				updated_at = now()
-		`;
-	});
-}
-
-export async function listRadarSubscriptions(): Promise<RadarSubscriptionRecord[]> {
-	const db = getDb();
-	const rows = await db<RadarSubscriptionRow[]>`
-		SELECT
-			p.id AS project_id,
-			p.name AS project_name,
-			p.slug AS project_slug,
-			s.channel_type,
-			s.channel_target,
-			s.frequency,
-			(
-				SELECT a.id
-				FROM analyses a
-				WHERE a.project_id = p.id
-				ORDER BY a.created_at DESC
-				LIMIT 1
-			) AS latest_analysis_id,
-			(
-				SELECT a.id
-				FROM analyses a
-				WHERE a.project_id = p.id
-					AND a.status = 'completed'
-				ORDER BY a.completed_at DESC NULLS LAST, a.created_at DESC
-				LIMIT 1
-			) AS latest_completed_analysis_id
-		FROM automation_subscriptions s
-		INNER JOIN projects p ON p.id = s.project_id
-		WHERE s.channel_type = 'slack'
-			AND s.enabled = true
-		ORDER BY p.name ASC
-	`;
-
-	return rows.map((row) => ({
-		projectId: row.project_id,
-		projectName: row.project_name,
-		projectSlug: row.project_slug,
-		channelType: row.channel_type,
-		channelTarget: row.channel_target,
-		frequency: row.frequency,
-		latestAnalysisId: row.latest_analysis_id ?? undefined,
-		latestCompletedAnalysisId: row.latest_completed_analysis_id ?? undefined
-	}));
-}
 
 function mapAnalysisRow(
 	row: AnalysisRow,
-	dependencies: DependencyRow[],
-	subscriptionRow?: SubscriptionRow
+	dependencies: DependencyRow[]
 ): AnalysisSnapshot {
 	const manifest = row.manifest_json ? parseJsonColumn<PackageJsonManifest>(row.manifest_json) : undefined;
 	const stats = parseJsonColumn<DependencyStats>(row.stats_json);
@@ -604,8 +478,7 @@ function mapAnalysisRow(
 					body?: string | null;
 				}>(row.webhook_response_json)
 			: undefined,
-		lastIdempotencyKey: row.last_idempotency_key ?? undefined,
-		subscription: subscriptionRow ? mapSubscriptionRow(subscriptionRow) : undefined
+		lastIdempotencyKey: row.last_idempotency_key ?? undefined
 	};
 }
 
@@ -642,16 +515,6 @@ function buildLegacyResolution(row: DependencyRow): DependencyResolution {
 					: 'up_to_date',
 		requiresManualReview: row.diff_type === 'unknown',
 		deprecationStatus: row.deprecated ? 'wanted_deprecated' : 'none'
-	};
-}
-
-function mapSubscriptionRow(row: SubscriptionRow): SlackSubscriptionSnapshot {
-	return {
-		channelType: row.channel_type,
-		channelTarget: row.channel_target,
-		frequency: row.frequency,
-		enabled: row.enabled,
-		updatedAt: toIsoString(row.updated_at)
 	};
 }
 

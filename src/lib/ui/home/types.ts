@@ -1,17 +1,15 @@
-import type { SlackFrequency } from '$lib/server/analysis/types';
 
 export interface EnvironmentReadiness {
 	databaseConfigured: boolean;
 	webhookConfigured: boolean;
 	callbackConfigured: boolean;
 	publicAppConfigured: boolean;
-	radarConfigured: boolean;
 }
 
 export interface HomeFormValues {
 	subscribeSlack: boolean;
 	slackChannelTarget: string;
-	slackFrequency: SlackFrequency;
+	slackFrequency: 'daily' | 'weekdays' | 'twice_daily';
 }
 
 export interface HeroStat {

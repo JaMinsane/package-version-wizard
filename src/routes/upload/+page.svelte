@@ -7,9 +7,9 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const initialValues = $derived<HomeFormValues>({
-		subscribeSlack: Boolean(form?.values?.subscribeSlack),
-		slackChannelTarget: form?.values?.slackChannelTarget ?? '',
-		slackFrequency: form?.values?.slackFrequency ?? 'daily'
+		subscribeSlack: Boolean((form as { values?: Partial<HomeFormValues> })?.values?.subscribeSlack),
+		slackChannelTarget: (form as { values?: Partial<HomeFormValues> })?.values?.slackChannelTarget ?? '',
+		slackFrequency: (form as { values?: Partial<HomeFormValues> })?.values?.slackFrequency ?? 'daily'
 	});
 </script>
 

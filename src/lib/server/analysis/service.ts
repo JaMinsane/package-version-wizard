@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
 
-import { env as privateEnv } from '$env/dynamic/private';
 
 import type {
 	AnalysisSnapshot,
@@ -13,9 +12,7 @@ import type {
 	PackageBrief,
 	ParsedPackageManifest,
 	ProjectSnapshot,
-	RadarSubscriptionRecord,
 	RiskLevel,
-	SlackFrequency,
 	SourceLink,
 	SourceLabel,
 	UpgradePhase
@@ -27,12 +24,10 @@ import {
 	getAnalysisById,
 	getLatestManifestByProject,
 	getProjectById,
-	listRadarSubscriptions,
 	markAnalysisFailed,
 	markAnalysisFailedIfPending,
 	markAnalysisWebhookAccepted,
 	savePreparedAnalysisData,
-	saveSlackSubscription,
 	setAnalysisStatus
 } from '$lib/server/analysis/repository';
 import { sendAnalysisToN8n } from '$lib/server/n8n/client';
@@ -46,15 +41,8 @@ const ANALYSIS_TIMEOUTS_MS = {
 } as const;
 const ANALYSIS_TIMEOUT_MESSAGE = 'El análisis excedió el tiempo máximo de espera del workflow.';
 
-interface SlackSubscriptionInput {
-	enabled: boolean;
-	channelTarget: string;
-	frequency: SlackFrequency;
-}
-
 export async function startUploadedAnalysis(input: {
 	parsedManifest: ParsedPackageManifest;
-	slackSubscription?: SlackSubscriptionInput;
 	projectIdOverride?: string;
 }): Promise<{ analysisId: string }> {
 	const analysisId = `analysis_${crypto.randomUUID()}`;
@@ -80,14 +68,6 @@ export async function startUploadedAnalysis(input: {
 		initialRequestPayload
 	});
 
-	if (input.slackSubscription) {
-		await saveSlackSubscription({
-			projectId: project.id,
-			enabled: input.slackSubscription.enabled,
-			channelTarget: input.slackSubscription.channelTarget,
-			frequency: input.slackSubscription.frequency
-		});
-	}
 
 	try {
 		await setAnalysisStatus(analysisId, 'enriching');
@@ -163,38 +143,6 @@ export async function getAnalysisSnapshot(id: string): Promise<AnalysisSnapshot 
 	return getAnalysisById(id);
 }
 
-export async function updateSlackSubscriptionForAnalysis(
-	analysisId: string,
-	input: SlackSubscriptionInput
-) {
-	const analysis = await getAnalysisById(analysisId);
-
-	if (!analysis) {
-		throw new Error('Ese análisis no existe o ya no está disponible.');
-	}
-
-	await saveSlackSubscription({
-		projectId: analysis.project.id,
-		enabled: input.enabled,
-		channelTarget: input.channelTarget,
-		frequency: input.frequency
-	});
-
-	return getAnalysisById(analysisId);
-}
-
-export async function getRadarSubscriptionRecords(): Promise<RadarSubscriptionRecord[]> {
-	const baseUrl = normalizeBaseUrl(privateEnv.APP_BASE_URL || privateEnv.PUBLIC_APP_URL);
-	const records = await listRadarSubscriptions();
-
-	return records.map((record) => ({
-		...record,
-		latestCompletedAnalysisUrl:
-			baseUrl && record.latestCompletedAnalysisId
-				? `${baseUrl}/analysis/${record.latestCompletedAnalysisId}`
-				: undefined
-	}));
-}
 
 export async function persistN8nCallback(
 	idempotencyKey: string,
@@ -327,10 +275,6 @@ function stripDependencyForN8n(dependency: AnalysisSnapshot['dependencies'][numb
 		sourceUrls: dependency.sourceUrls,
 		resolution: dependency.resolution
 	};
-}
-
-function normalizeBaseUrl(value: string | undefined) {
-	return value?.trim().replace(/\/$/, '') || undefined;
 }
 
 function hasAnalysisTimedOut(analysis: AnalysisSnapshot) {

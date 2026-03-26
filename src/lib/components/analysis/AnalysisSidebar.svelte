@@ -105,9 +105,7 @@
 					<p class="section-label">Automatización</p>
 					<h2 class="mt-3 text-xl font-bold text-white">Radar continuo</h2>
 				</div>
-				{#if analysis.subscription?.enabled}
-					<span class="neon-badge neon-badge--green">Activo</span>
-				{/if}
+
 			</div>
 
 			<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed-relaxed)]">
@@ -121,7 +119,7 @@
 						name="enabled"
 						type="checkbox"
 						class="rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
-						checked={analysis.subscription?.enabled ?? false}
+						checked={false}
 					/>
 					Activar radar por Slack
 				</label>
@@ -135,7 +133,7 @@
 							name="channelTarget"
 							type="text"
 							placeholder="#platform-upgrades"
-							value={analysis.subscription?.channelTarget ?? ''}
+							value=""
 							class="mt-2 w-full"
 						/>
 					</label>
@@ -148,13 +146,13 @@
 							name="frequency"
 							class="mt-2 w-full"
 						>
-							<option value="daily" selected={(analysis.subscription?.frequency ?? 'daily') === 'daily'}>
+							<option value="daily" selected={true}>
 								Diario
 							</option>
-							<option value="weekdays" selected={analysis.subscription?.frequency === 'weekdays'}>
+							<option value="weekdays" selected={false}>
 								Lunes a viernes
 							</option>
-							<option value="twice_daily" selected={analysis.subscription?.frequency === 'twice_daily'}>
+							<option value="twice_daily" selected={false}>
 								Dos veces al día
 							</option>
 						</select>

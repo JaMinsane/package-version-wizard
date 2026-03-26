@@ -115,10 +115,5 @@ export const readinessItemDefinitions: ReadinessItemDefinition[] = [
 		key: 'publicAppConfigured',
 		label: 'Links públicos',
 		description: '`APP_BASE_URL`'
-	},
-	{
-		key: 'radarConfigured',
-		label: 'Radar interno',
-		description: '`N8N_INTERNAL_API_TOKEN`'
 	}
 ];
