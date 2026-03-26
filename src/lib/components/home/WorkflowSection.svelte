@@ -19,7 +19,7 @@
 				<h2 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
 					Una secuencia corta, una lectura más útil
 				</h2>
-				<p class="mt-3 text-sm leading-7 text-[var(--text-muted)] sm:text-base">
+				<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)] sm:text-base">
 					La experiencia se enfoca en mostrar progreso, decisión y continuidad sin añadir pasos
 					superfluos.
 				</p>
@@ -32,9 +32,9 @@
 				<article class="rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.5)] p-5">
 					<p class="text-xs font-bold uppercase tracking-[0.3em] text-[var(--neon-green)]" style="text-shadow: 0 0 8px rgba(15,255,106,0.3)">[{step.index}]</p>
 					<h3 class="mt-4 text-xl font-bold text-white">{step.title}</h3>
-					<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">{step.description}</p>
+					<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">{step.description}</p>
 					<div class="data-cell mt-5">
-						<p class="text-sm leading-7 text-[var(--text-muted)]">{step.detail}</p>
+						<p class="text-sm leading-7 text-[var(--text-muted-relaxed)]">{step.detail}</p>
 					</div>
 				</article>
 			{/each}

@@ -34,16 +34,16 @@
 		</div>
 	</div>
 
-	<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">{brief.summary}</p>
+	<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">{brief.summary}</p>
 
-	<div class="data-cell mt-4 text-sm text-[var(--text-muted)]">
+	<div class="data-cell mt-4 text-sm text-[var(--text-muted-relaxed)]">
 		{getEvidenceMessage(brief)}
 	</div>
 
 	{#if (brief.breakingChanges ?? []).length}
 		<div class="mt-5">
 			<p class="text-xs font-bold uppercase tracking-widest text-[var(--text-dim)]">Cambios críticos</p>
-			<ul class="mt-2 space-y-2 text-sm text-[var(--text-muted)]">
+			<ul class="mt-2 space-y-2 text-sm text-[var(--text-muted-relaxed)]">
 				{#each brief.breakingChanges ?? [] as change}
 					<li class="alert-box alert-box--red">{change}</li>
 				{/each}
@@ -54,7 +54,7 @@
 	{#if (brief.recommendedActions ?? []).length}
 		<div class="mt-5">
 			<p class="text-xs font-bold uppercase tracking-widest text-[var(--text-dim)]">Acciones sugeridas</p>
-			<ul class="mt-2 space-y-2 text-sm text-[var(--text-muted)]">
+			<ul class="mt-2 space-y-2 text-sm text-[var(--text-muted-relaxed)]">
 				{#each brief.recommendedActions ?? [] as action}
 					<li class="data-cell">{action}</li>
 				{/each}

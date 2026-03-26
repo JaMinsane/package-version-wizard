@@ -62,7 +62,7 @@
 					<article class="rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.5)] p-5">
 						<span class="neon-badge neon-badge--cyan">Fase {phase.wave}</span>
 						<h3 class="mt-3 text-lg font-bold text-white">{phase.title}</h3>
-						<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">{phase.rationale}</p>
+						<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed-relaxed)]">{phase.rationale}</p>
 						<div class="mt-4 flex flex-wrap gap-2">
 							{#each phase.packages as packageName}
 								<span class="neon-badge neon-badge--muted">

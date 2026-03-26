@@ -33,7 +33,7 @@
 			<div class="mt-4 flex items-start justify-between gap-4">
 				<div>
 					<h2 class="text-xl font-bold text-white">{analysisStatusLabels[analysis.status]}</h2>
-					<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">{analysisStatusDescriptions[analysis.status]}</p>
+					<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed-relaxed)]">{analysisStatusDescriptions[analysis.status]}</p>
 				</div>
 				<span class={getStatusTone(analysis.status)}>
 					{analysisStatusLabels[analysis.status]}
@@ -81,7 +81,7 @@
 					</div>
 					<div>
 						<p class="text-xs uppercase tracking-widest text-[var(--text-dim)]">Clave de idempotencia</p>
-						<p class="mt-2 break-all text-xs leading-6 text-[var(--text-muted)]">
+						<p class="mt-2 break-all text-xs leading-6 text-[var(--text-muted-relaxed-relaxed)]">
 							{analysis.lastIdempotencyKey ?? 'Aún no llegó callback'}
 						</p>
 					</div>
@@ -110,7 +110,7 @@
 				{/if}
 			</div>
 
-			<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">
+			<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed-relaxed)]">
 				Conecta este proyecto a Slack para seguir recibiendo cambios relevantes sin volver a subir el
 				manifiesto.
 			</p>

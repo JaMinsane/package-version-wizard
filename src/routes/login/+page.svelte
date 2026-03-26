@@ -94,7 +94,7 @@
 								/>
 								<button
 									type="button"
-									class="absolute right-2 top-1/2 -translate-y-1/2 text-[0.65rem] uppercase tracking-wider text-[var(--text-muted)] transition-colors hover:text-[var(--neon-green)]"
+									class="absolute right-2 top-1/2 -translate-y-1/2 text-[0.65rem] uppercase tracking-wider text-[var(--text-muted-relaxed)] transition-colors hover:text-[var(--neon-green)]"
 									onclick={() => (showPassword = !showPassword)}
 								>
 									{showPassword ? 'ocultar' : 'mostrar'}
@@ -161,7 +161,7 @@
 								/>
 								<button
 									type="button"
-									class="absolute right-2 top-1/2 -translate-y-1/2 text-[0.65rem] uppercase tracking-wider text-[var(--text-muted)] transition-colors hover:text-[var(--neon-green)]"
+									class="absolute right-2 top-1/2 -translate-y-1/2 text-[0.65rem] uppercase tracking-wider text-[var(--text-muted-relaxed)] transition-colors hover:text-[var(--neon-green)]"
 									onclick={() => (showPassword = !showPassword)}
 								>
 									{showPassword ? 'ocultar' : 'mostrar'}
@@ -210,7 +210,7 @@
 		font-size: 0.72rem;
 		font-weight: 600;
 		letter-spacing: 0.05em;
-		color: var(--text-muted);
+		color: var(--text-muted-relaxed);
 		background: transparent;
 		border: 1px solid transparent;
 		cursor: pointer;
@@ -240,7 +240,7 @@
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.1em;
-		color: var(--text-muted);
+		color: var(--text-muted-relaxed);
 	}
 
 	.form-input {

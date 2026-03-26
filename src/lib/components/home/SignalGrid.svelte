@@ -35,7 +35,7 @@
 			<h2 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
 				Señal útil antes de ejecutar cambios
 			</h2>
-			<p class="mt-3 text-sm leading-7 text-[var(--text-muted)] sm:text-base">
+			<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)] sm:text-base">
 				La interfaz organiza el resultado para que el equipo vea valor rápido sin perder trazabilidad
 				técnica.
 			</p>
@@ -45,7 +45,7 @@
 					<article class={`rounded-lg border bg-[rgba(10,10,15,0.5)] p-5 ${getAccentClass(card.accent)}`}>
 						<span class={`neon-badge ${getAccentBadge(card.accent)}`}>{card.eyebrow}</span>
 						<h3 class="mt-3 text-lg font-bold text-white">{card.title}</h3>
-						<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">{card.description}</p>
+						<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">{card.description}</p>
 					</article>
 				{/each}
 			</div>
@@ -79,7 +79,7 @@
 					<article class={`rounded-lg border bg-[rgba(10,10,15,0.5)] p-5 ${getAccentClass(card.accent)}`}>
 						<span class={`neon-badge ${getAccentBadge(card.accent)}`}>{card.eyebrow}</span>
 						<h3 class="mt-3 text-base font-bold text-white">{card.title}</h3>
-						<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">{card.description}</p>
+						<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">{card.description}</p>
 					</article>
 				{/each}
 			</div>
@@ -90,13 +90,13 @@
 					<div class="mt-4 grid gap-3">
 						<div class="data-cell">
 							<p class="text-sm font-bold text-white">Brief ejecutivo</p>
-							<p class="mt-2 text-sm leading-7 text-[var(--text-muted)]">
+							<p class="mt-2 text-sm leading-7 text-[var(--text-muted-relaxed)]">
 								Resumen renderizado desde Markdown con una lectura clara para priorizar el trabajo.
 							</p>
 						</div>
 						<div class="data-cell">
 							<p class="text-sm font-bold text-white">Prioridades y dependencias</p>
-							<p class="mt-2 text-sm leading-7 text-[var(--text-muted)]">
+							<p class="mt-2 text-sm leading-7 text-[var(--text-muted-relaxed)]">
 								Las tarjetas resaltan lo que requiere cambio ahora y lo que ya cubre el rango
 								declarado.
 							</p>
@@ -109,7 +109,7 @@
 					<h3 class="mt-3 text-lg font-bold text-white">
 						El radar no compite con la lectura, la extiende.
 					</h3>
-					<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">
+					<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
 						La configuración de Slack permanece disponible cuando quieres activar seguimiento
 						continuo, pero sin desplazar el análisis central.
 					</p>

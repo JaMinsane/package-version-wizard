@@ -8,5 +8,5 @@
 </script>
 
 <form method="POST" use:enhance>
-	<p class="text-center text-sm text-[var(--text-muted)]">Cerrando sesión...</p>
+	<p class="text-center text-sm text-[var(--text-muted-relaxed)]">Cerrando sesión...</p>
 </form>

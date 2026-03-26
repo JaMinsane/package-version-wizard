@@ -73,7 +73,7 @@
 			<div class="max-w-2xl">
 				<p class="section-label">Entrada</p>
 				<h2 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">Inicia una corrida nueva</h2>
-				<p class="mt-3 text-sm leading-7 text-[var(--text-muted)] sm:text-base">
+				<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)] sm:text-base">
 					El formulario mantiene la experiencia simple, pero la salida queda preparada para revisión
 					técnica, seguimiento y automatización.
 				</p>
@@ -127,9 +127,9 @@
 			<div class="rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.5)] p-5 sm:p-6">
 				<div class="flex items-start justify-between gap-4">
 					<div>
-						<p class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">Archivo</p>
+						<p class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted-relaxed)]">Archivo</p>
 						<h3 class="mt-3 text-xl font-bold text-white">package.json</h3>
-						<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">
+						<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
 							Sube el manifiesto principal del proyecto. La app lo valida y prepara la corrida sin
 							exponer lógica sensible en el cliente.
 						</p>
@@ -147,7 +147,7 @@
 						onchange={handleFileSelection}
 						required
 					/>
-					<p class="mt-4 data-cell text-sm text-[var(--text-muted)]">
+					<p class="mt-4 data-cell text-sm text-[var(--text-muted-relaxed)]">
 						<span class="text-[var(--neon-green)] mr-2">{'>'}</span>{selectedFileName || 'Elige el archivo que quieres analizar.'}
 					</p>
 				</div>
@@ -156,9 +156,9 @@
 			<div class="rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.5)] p-5 sm:p-6">
 				<div class="flex items-start justify-between gap-4">
 					<div>
-						<p class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">Automatización</p>
+						<p class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted-relaxed)]">Automatización</p>
 						<h3 class="mt-3 text-xl font-bold text-white">Radar por Slack</h3>
-						<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">
+						<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
 							Opcional. Deja conectado el proyecto para observar cambios relevantes después de esta
 							primera corrida.
 						</p>
@@ -206,7 +206,7 @@
 
 				<div class="data-cell mt-6">
 					<p class="text-xs font-bold uppercase tracking-widest text-[var(--text-dim)]">Salida esperada</p>
-					<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">
+					<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
 						La corrida devuelve progreso persistido, dependencias priorizadas, brief renderizado y
 						un punto de partida claro para el siguiente paso.
 					</p>

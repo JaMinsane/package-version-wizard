@@ -28,7 +28,7 @@
 			<h1 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-4xl">
 				Sube tu manifiesto
 			</h1>
-			<p class="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[var(--text-muted)]">
+			<p class="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[var(--text-muted-relaxed)]">
 				Carga tu <code class="text-[var(--neon-green)]">package.json</code> para iniciar el análisis
 				de dependencias, obtener un brief AI y configurar automatización continua.
 			</p>

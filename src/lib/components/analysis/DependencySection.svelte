@@ -26,7 +26,7 @@
 	<div class="terminal-body">
 		<p class="section-label">{eyebrow}</p>
 		<h2 class="mt-3 text-2xl font-bold tracking-tight text-white">{title}</h2>
-		<p class="mt-3 text-sm leading-7 text-[var(--text-muted)]">{description}</p>
+		<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed-relaxed)]">{description}</p>
 
 		<div class="mt-6 grid gap-4 xl:grid-cols-2">
 			{#if items.length}

@@ -30,7 +30,7 @@
 					clara de qué actualizar, qué probar y qué automatizar<span class="cursor-blink"></span>
 				</h1>
 
-				<p class="mt-6 max-w-2xl text-sm leading-7 text-[var(--text-muted)] sm:text-base">
+				<p class="mt-6 max-w-2xl text-sm leading-7 text-[var(--text-muted-relaxed)] sm:text-base">
 					Una interfaz enfocada en operación: subes el manifiesto, obtienes señal priorizada del
 					registry de npm y revisas un brief técnico para coordinar upgrades con más criterio.
 				</p>
@@ -41,7 +41,7 @@
 					<article class="data-cell">
 						<p class="text-sm font-bold uppercase tracking-widest text-[var(--neon-green)]" style="text-shadow: 0 0 8px rgba(15,255,106,0.3)">{stat.value}</p>
 						<h2 class="mt-3 text-lg font-semibold text-white">{stat.label}</h2>
-						<p class="mt-2 text-sm leading-7 text-[var(--text-muted)]">{stat.description}</p>
+						<p class="mt-2 text-sm leading-7 text-[var(--text-muted-relaxed)]">{stat.description}</p>
 					</article>
 				{/each}
 			</div>

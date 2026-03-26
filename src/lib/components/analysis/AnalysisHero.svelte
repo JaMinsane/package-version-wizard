@@ -34,7 +34,7 @@
 				<h1 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-4xl">
 					{analysis.project.name}
 				</h1>
-				<p class="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-muted)] sm:text-base">
+				<p class="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-muted-relaxed-relaxed)] sm:text-base">
 					{analysis.manifestName ?? 'package.json'}
 					{#if analysis.manifestVersion}
 						<span class="mx-2 text-[var(--text-dim)]">·</span>
