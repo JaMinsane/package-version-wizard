@@ -91,7 +91,7 @@
 						{:else}
 							<div class="alert-box alert-box--amber mt-4">
 								Todavía no hay un workspace conectado. Instala el bot para habilitar el selector de
-								canales y las notificaciones automáticas.
+								canales y las notificaciones finales.
 							</div>
 						{/if}
 					</div>

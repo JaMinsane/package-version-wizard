@@ -113,13 +113,13 @@
 				</div>
 
 				<div class="rounded-lg border border-[rgba(0,229,255,0.15)] bg-[rgba(0,229,255,0.04)] p-5">
-					<span class="neon-badge neon-badge--cyan">Automatización</span>
+					<span class="neon-badge neon-badge--cyan">Notificación final</span>
 					<h3 class="mt-3 text-lg font-bold text-white">
 						Slack aparece al final, no en medio del análisis.
 					</h3>
 					<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-						El upload y el brief siguen siendo el centro. Slack solo publica el resultado final y el
-						link del análisis cuando ya existe algo útil que compartir.
+						El upload y el brief siguen siendo el centro. Slack solo recibe la notificación final y
+						el link del análisis cuando ya existe algo útil que compartir.
 					</p>
 				</div>
 			</div>

@@ -9,13 +9,13 @@ export const homeHeroStats: HeroStat[] = [
 	},
 	{
 		value: '3 capas',
-		label: 'Diff, resumen y ejecución',
+		label: 'Diff, brief y notificación',
 		description:
-			'Registry, brief y plan de acción quedan alineados en una misma corrida persistida.'
+			'Registry, resumen ejecutivo y salida por canal quedan alineados en una misma corrida persistida.'
 	},
 	{
 		value: 'URL viva',
-		label: 'Resultado compartible',
+		label: 'Resultado listo para compartir',
 		description:
 			'El análisis se guarda, se puede volver a abrir y deja listo el deep link para Slack.'
 	}
@@ -90,7 +90,7 @@ export const homeFlowSteps: FlowStep[] = [
 		description:
 			'La vista de análisis consolida brief, dependencias críticas, evidencia y la configuración Slack por proyecto.',
 		detail:
-			'Si Slack está activo, n8n envía la notificación final al canal elegido con deep link incluido.'
+			'Si Slack está activo, n8n publica la notificación final en el canal elegido con deep link incluido.'
 	}
 ];
 

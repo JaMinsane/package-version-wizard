@@ -75,7 +75,7 @@
 					<span
 						class="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-[var(--neon-cyan)] shadow-[0_0_6px_var(--neon-cyan)]"
 					></span>
-					La página sigue consultando el estado automáticamente.
+					La página sigue consultando el estado en segundo plano.
 				</div>
 			{/if}
 
