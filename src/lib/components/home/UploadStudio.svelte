@@ -14,7 +14,9 @@
 
 	let isSubmitting = $state(false);
 	let selectedFileName = $state('');
+	let isDragging = $state(false);
 	let showReadiness = $state(false);
+	let fileInputRef: HTMLInputElement | undefined = $state(undefined);
 
 	const analysisReady = $derived(
 		environmentReady.databaseConfigured &&
@@ -43,6 +45,28 @@
 		selectedFileName = input.files?.[0]?.name ?? '';
 	}
 
+	function handleDrop(event: DragEvent) {
+		event.preventDefault();
+		isDragging = false;
+
+		const file = event.dataTransfer?.files[0];
+		if (file && fileInputRef) {
+			const dt = new DataTransfer();
+			dt.items.add(file);
+			fileInputRef.files = dt.files;
+			selectedFileName = file.name;
+		}
+	}
+
+	function handleDragOver(event: DragEvent) {
+		event.preventDefault();
+		isDragging = true;
+	}
+
+	function handleDragLeave() {
+		isDragging = false;
+	}
+
 	function toggleReadiness() {
 		showReadiness = !showReadiness;
 	}
@@ -59,38 +83,107 @@
 	</div>
 
 	<div class="terminal-body">
-		<div class="flex flex-wrap items-start justify-between gap-4">
-			<div class="max-w-2xl">
-				<p class="section-label">Entrada</p>
-				<h2 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-					Nuevo análisis
-				</h2>
-				<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)] sm:text-base">
-					Sube tu package.json y obtén el reporte. La integración con Slack es opcional y se configura en tu perfil.
-				</p>
+		<form
+			method="POST"
+			action="?/analyzePackageJson"
+			enctype="multipart/form-data"
+			use:enhance={enhanceUpload}
+			class="flex flex-col gap-6"
+		>
+			<!-- Drop zone -->
+			<div
+				class="upload-drop-zone"
+				class:upload-drop-zone--active={isDragging}
+				class:upload-drop-zone--selected={!!selectedFileName}
+				role="button"
+				tabindex="0"
+				ondrop={handleDrop}
+				ondragover={handleDragOver}
+				ondragleave={handleDragLeave}
+				onclick={() => fileInputRef?.click()}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') fileInputRef?.click();
+				}}
+			>
+				<input
+					bind:this={fileInputRef}
+					id="packageJson"
+					name="packageJson"
+					type="file"
+					accept=".json,application/json"
+					class="sr-only"
+					onchange={handleFileSelection}
+					required
+				/>
+
+				{#if selectedFileName}
+					<div class="flex flex-col items-center gap-3">
+						<span class="upload-icon upload-icon--ready">✓</span>
+						<p class="text-base font-semibold text-white">{selectedFileName}</p>
+						<p class="text-xs text-[var(--text-dim)]">
+							Click o arrastra otro archivo para reemplazar
+						</p>
+					</div>
+				{:else}
+					<div class="flex flex-col items-center gap-3">
+						<span class="upload-icon">↑</span>
+						<p class="text-base font-semibold text-white">
+							Arrastra tu package.json aquí
+						</p>
+						<p class="text-xs text-[var(--text-dim)]">
+							o haz click para seleccionarlo <span class="text-[var(--text-muted-relaxed)]">· máx 1 MB</span>
+						</p>
+					</div>
+				{/if}
 			</div>
 
-			<div class="flex flex-wrap items-center gap-3">
-				<span class="neon-badge neon-badge--muted">Upload + análisis server-side</span>
-				<button
-					type="button"
-					class="neon-badge neon-badge--green cursor-pointer transition-all hover:shadow-[0_0_16px_rgba(15,255,106,0.3)]"
-					aria-expanded={showReadiness}
-					aria-controls="environment-panel"
-					onclick={toggleReadiness}
-				>
-					<span
-						class="inline-block h-2 w-2 rounded-full bg-[var(--neon-green)] shadow-[0_0_6px_var(--neon-green)]"
-					></span>
-					Estado del stack
-				</button>
-			</div>
+			<!-- Submit -->
+			<button type="submit" class="neon-button w-full" disabled={!analysisReady || isSubmitting || !selectedFileName}>
+				<span
+					class={`inline-block h-2.5 w-2.5 rounded-full bg-[#0a0a0f] ${isSubmitting ? 'animate-pulse' : ''}`}
+				></span>
+				{isSubmitting ? 'Preparando análisis...' : '[ ANALIZAR PACKAGE.JSON ]'}
+			</button>
+
+			{#if formMessage}
+				<div class="alert-box alert-box--red">
+					{formMessage}
+				</div>
+			{/if}
+
+			{#if !analysisReady}
+				<div class="alert-box alert-box--amber">
+					Configura Postgres, el webhook de n8n y el callback antes de lanzar análisis.
+				</div>
+			{/if}
+		</form>
+
+		<!-- Stack readiness toggle (secondary, collapsed by default) -->
+		<div class="mt-6 flex items-center gap-3">
+			<button
+				type="button"
+				class="neon-badge neon-badge--green cursor-pointer text-xs transition-all hover:shadow-[0_0_16px_rgba(15,255,106,0.3)]"
+				aria-expanded={showReadiness}
+				aria-controls="environment-panel"
+				onclick={toggleReadiness}
+			>
+				<span
+					class="inline-block h-1.5 w-1.5 rounded-full bg-[var(--neon-green)] shadow-[0_0_6px_var(--neon-green)]"
+				></span>
+				Stack status
+			</button>
+			<a
+				href="/settings/integrations/slack"
+				class="neon-badge neon-badge--muted text-xs transition-all hover:border-[rgba(0,229,255,0.4)] hover:text-[var(--neon-cyan)]"
+			>
+				Slack config →
+			</a>
 		</div>
 
 		{#if showReadiness}
 			<div
 				id="environment-panel"
-				class="mt-6 grid gap-3 rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.6)] p-4 sm:grid-cols-2"
+				class="mt-4 grid gap-3 rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.6)] p-4 sm:grid-cols-2"
 			>
 				{#each readinessItems as item}
 					<div class="data-cell">
@@ -109,99 +202,63 @@
 				{/each}
 			</div>
 		{/if}
-
-		<form
-			method="POST"
-			action="?/analyzePackageJson"
-			enctype="multipart/form-data"
-			use:enhance={enhanceUpload}
-			class="mt-6 grid gap-5 xl:grid-cols-[1.14fr_0.86fr]"
-		>
-			<div
-				class="rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.5)] p-5 sm:p-6"
-			>
-				<div class="flex items-start justify-between gap-4">
-					<div>
-						<p class="text-xs font-bold tracking-widest text-[var(--text-muted-relaxed)] uppercase">
-							Archivo
-						</p>
-						<h3 class="mt-3 text-xl font-bold text-white">package.json</h3>
-						<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-							Sube el archivo principal del proyecto. Se valida y procesa en el servidor.
-						</p>
-					</div>
-					<span class="neon-badge neon-badge--cyan">Límite 1 MB</span>
-				</div>
-
-				<div
-					class="mt-6 rounded-lg border border-dashed border-[var(--neon-green)]/30 bg-[rgba(10,10,15,0.8)] p-5"
-				>
-					<input
-						id="packageJson"
-						name="packageJson"
-						type="file"
-						accept=".json,application/json"
-						class="block w-full cursor-pointer text-sm text-[var(--text-primary)] file:mr-4 file:rounded-md file:border file:border-[var(--neon-green)] file:bg-transparent file:px-4 file:py-2.5 file:text-sm file:font-bold file:text-[var(--neon-green)] hover:file:bg-[rgba(15,255,106,0.1)]"
-						onchange={handleFileSelection}
-						required
-					/>
-					<p class="data-cell mt-4 text-sm text-[var(--text-muted-relaxed)]">
-						<span class="mr-2 text-[var(--neon-green)]">{'>'}</span>{selectedFileName ||
-							'Elige el archivo que quieres analizar.'}
-					</p>
-				</div>
-			</div>
-
-			<div
-				class="rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.5)] p-5 sm:p-6"
-			>
-				<div class="flex items-start justify-between gap-4">
-					<div>
-						<p class="text-xs font-bold tracking-widest text-[var(--text-muted-relaxed)] uppercase">
-							Notificaciones
-						</p>
-						<h3 class="mt-3 text-xl font-bold text-white">Notificaciones Slack</h3>
-						<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-							El análisis funciona sin Slack. Si quieres recibir notificaciones, configúralo
-							desde el menú de usuario o con el acceso directo de abajo.
-						</p>
-					</div>
-					<a href="/settings/integrations/slack" class="neon-badge neon-badge--green">
-						Abrir configuración
-					</a>
-				</div>
-
-				<div class="data-cell mt-6">
-					<p class="text-xs font-bold tracking-widest text-[var(--text-dim)] uppercase">
-						Salida esperada
-					</p>
-					<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-						Al terminar obtienes: dependencias priorizadas, brief AI y, si Slack está activo,
-						un mensaje con el link al análisis.
-					</p>
-				</div>
-			</div>
-
-			<div class="xl:col-span-2">
-				<button type="submit" class="neon-button w-full" disabled={!analysisReady || isSubmitting}>
-					<span
-						class={`inline-block h-2.5 w-2.5 rounded-full bg-[#0a0a0f] ${isSubmitting ? 'animate-pulse' : ''}`}
-					></span>
-					{isSubmitting ? 'Preparando análisis...' : '[ ANALIZAR PACKAGE.JSON ]'}
-				</button>
-
-				{#if formMessage}
-					<div class="alert-box alert-box--red mt-4">
-						{formMessage}
-					</div>
-				{/if}
-
-				{#if !analysisReady}
-					<div class="alert-box alert-box--amber mt-4">
-						Configura Postgres, el webhook de n8n y el callback antes de lanzar análisis.
-					</div>
-				{/if}
-			</div>
-		</form>
 	</div>
 </section>
+
+<style>
+	.upload-drop-zone {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 180px;
+		padding: 2rem;
+		border-radius: 0.75rem;
+		border: 2px dashed rgba(15, 255, 106, 0.2);
+		background: rgba(10, 10, 15, 0.6);
+		cursor: pointer;
+		transition: all 0.25s ease;
+	}
+
+	.upload-drop-zone:hover,
+	.upload-drop-zone:focus-visible {
+		border-color: rgba(15, 255, 106, 0.45);
+		background: rgba(15, 255, 106, 0.04);
+		box-shadow: 0 0 30px rgba(15, 255, 106, 0.06);
+	}
+
+	.upload-drop-zone--active {
+		border-color: var(--neon-green);
+		background: rgba(15, 255, 106, 0.08);
+		box-shadow: 0 0 40px rgba(15, 255, 106, 0.12);
+	}
+
+	.upload-drop-zone--selected {
+		border-color: rgba(15, 255, 106, 0.4);
+		border-style: solid;
+	}
+
+	.upload-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 3rem;
+		height: 3rem;
+		border-radius: 50%;
+		border: 2px solid rgba(15, 255, 106, 0.3);
+		color: var(--neon-green);
+		font-size: 1.25rem;
+		font-weight: bold;
+		transition: all 0.25s ease;
+	}
+
+	.upload-icon--ready {
+		border-color: var(--neon-green);
+		background: rgba(15, 255, 106, 0.12);
+		box-shadow: 0 0 16px rgba(15, 255, 106, 0.25);
+	}
+
+	.upload-drop-zone:hover .upload-icon {
+		border-color: rgba(15, 255, 106, 0.5);
+		box-shadow: 0 0 12px rgba(15, 255, 106, 0.15);
+	}
+</style>

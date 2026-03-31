@@ -55,7 +55,7 @@ export const homeOutputCards: StoryCard[] = [
 	},
 	{
 		eyebrow: 'Fases',
-		title: 'Plan de upgrade por waves',
+		title: 'Plan de upgrade por etapas',
 		description:
 			'Los paquetes se agrupan por impacto para que ejecutes el upgrade en orden y con menos riesgo.',
 		accent: 'cyan'
