@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import slackLogo from '$lib/assets/slack-logo.svg';
+	import SlackHighlightsLimitField from '$lib/components/slack/SlackHighlightsLimitField.svelte';
 
 	import type { ActionData, PageData } from './$types';
 
@@ -232,20 +233,11 @@
 							</label>
 						</div>
 
-						<label class="block">
-							<span class="text-xs font-bold tracking-widest text-[var(--text-dim)] uppercase">
-								Límite de highlights
-							</span>
-							<input
-								name="topPackagesLimit"
-								type="number"
-								min="1"
-								max="10"
-								value={data.slack.defaults.topPackagesLimit}
-								disabled={!includeTopPackages}
-								class="mt-2 w-full"
-							/>
-						</label>
+						<SlackHighlightsLimitField
+							name="topPackagesLimit"
+							value={data.slack.defaults.topPackagesLimit}
+							disabled={!includeTopPackages}
+						/>
 					</div>
 
 					<button type="submit" class="neon-button mt-6 w-full"> [ GUARDAR ] </button>

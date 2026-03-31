@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SlackHighlightsLimitField from '$lib/components/slack/SlackHighlightsLimitField.svelte';
 	import type { AnalysisSnapshot } from '$lib/server/analysis/types';
 	import type { AnalysisSlackPanelData } from '$lib/server/slack/types';
 	import {
@@ -257,20 +258,11 @@
 								</label>
 							</div>
 
-							<label class="block">
-								<span class="text-xs font-bold tracking-widest text-[var(--text-dim)] uppercase">
-									Límite de highlights
-								</span>
-								<input
-									name="topPackagesLimit"
-									type="number"
-									min="1"
-									max="10"
-									value={slack.projectSettings?.topPackagesLimit ?? 3}
-									disabled={!includeTopPackages}
-									class="mt-2 w-full"
-								/>
-							</label>
+							<SlackHighlightsLimitField
+								name="topPackagesLimit"
+								value={slack.projectSettings?.topPackagesLimit ?? 3}
+								disabled={!includeTopPackages}
+							/>
 						</div>
 					{/if}
 
