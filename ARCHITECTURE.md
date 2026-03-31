@@ -53,6 +53,7 @@ SvelteKit
   -> persiste artefactos AI
   -> persiste auditoría de Slack
   -> expone análisis público y settings privados
+  -> expone /health para healthchecks de Dokploy
 ```
 
 ## Rutas
@@ -61,6 +62,7 @@ SvelteKit
 
 - `/`
 - `/analysis/[id]`
+- `/health`
 - `/login`
 
 ### Autenticadas

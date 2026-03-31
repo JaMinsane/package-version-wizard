@@ -25,6 +25,10 @@ ENV NODE_ENV=production \
     PORT=3000 \
     BODY_SIZE_LIMIT=1M
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --chown=bun:bun package.json ./
 COPY --from=deps-prod --chown=bun:bun /app/node_modules ./node_modules
 COPY --from=builder --chown=bun:bun /app/build ./build

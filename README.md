@@ -106,12 +106,22 @@ bun run lint
 
 ## Producción
 
+El flujo recomendado para VPS + Dokploy ya no es compilar en el servidor. La app está preparada para:
+
+1. construir la imagen en GitHub Actions
+2. publicar la imagen en GHCR
+3. disparar el deploy en Dokploy vía API
+
+La guía operativa completa está en [`DEPLOYMENT.md`](./DEPLOYMENT.md).
+
+Si necesitas validar localmente el runtime productivo:
+
 ```bash
 bun run build
 bun run start
 ```
 
-Si prefieres arrancar directamente el output de `adapter-node`, usa `node build/index.js`.
+También puedes arrancar directamente el output de `adapter-node` con `node build/index.js`.
 
 ## Workflows incluidos
 
@@ -178,3 +188,4 @@ Callback resumido:
 
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md)
 - [`BD.md`](./BD.md)
+- [`DEPLOYMENT.md`](./DEPLOYMENT.md)
