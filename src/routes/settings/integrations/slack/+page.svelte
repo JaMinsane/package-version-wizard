@@ -24,28 +24,20 @@
 
 <svelte:head>
 	<title>Slack | Package Version Wizard</title>
-	<meta
-		name="description"
-		content="Conecta Slack y configura las notificaciones de análisis."
-	/>
+	<meta name="description" content="Conecta Slack y configura las notificaciones de análisis." />
 </svelte:head>
 
 <div class="min-h-screen px-4 py-6 sm:px-6 lg:px-10">
 	<div class="mx-auto flex max-w-5xl flex-col gap-6">
-
 		<!-- Status alerts -->
 		{#if $page.url.searchParams.get('slack') === 'connected'}
 			<div class="alert-box alert-box--green">
 				Slack conectado. Credencial sincronizada con n8n.
 			</div>
 		{:else if $page.url.searchParams.get('slack') === 'connect-error'}
-			<div class="alert-box alert-box--red">
-				La instalación o sincronización con n8n falló.
-			</div>
+			<div class="alert-box alert-box--red">La instalación o sincronización con n8n falló.</div>
 		{:else if $page.url.searchParams.get('slack') === 'denied'}
-			<div class="alert-box alert-box--amber">
-				La instalación fue cancelada desde Slack.
-			</div>
+			<div class="alert-box alert-box--amber">La instalación fue cancelada desde Slack.</div>
 		{:else if $page.url.searchParams.get('slack') === 'invalid-state'}
 			<div class="alert-box alert-box--red">
 				No se pudo validar el retorno de Slack. Intenta de nuevo.
@@ -73,15 +65,15 @@
 				<div class="flex flex-wrap items-start justify-between gap-6">
 					<div>
 						<p class="section-label">Integración</p>
-						<h1 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-							Slack
-						</h1>
+						<h1 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">Slack</h1>
 					</div>
 
 					<div class="flex items-center gap-3">
 						{#if data.slack.workspace}
 							<span class="neon-badge neon-badge--green">
-								<span class="inline-block h-2 w-2 rounded-full bg-[var(--neon-green)] shadow-[0_0_6px_var(--neon-green)]"></span>
+								<span
+									class="inline-block h-2 w-2 rounded-full bg-[var(--neon-green)] shadow-[0_0_6px_var(--neon-green)]"
+								></span>
 								{data.slack.workspace.teamName}
 							</span>
 						{:else}
@@ -91,12 +83,11 @@
 				</div>
 
 				<!-- Prominent install/reconnect button -->
-				<div class="mt-6 rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.45)] p-6">
+				<div
+					class="mt-6 rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.45)] p-6"
+				>
 					{#if data.slack.installReady}
-						<a
-							href="/settings/integrations/slack/connect"
-							class="slack-install-button"
-						>
+						<a href="/settings/integrations/slack/connect" class="slack-install-button">
 							<img src={slackLogo} alt="Slack" class="h-6 w-6" />
 							<span class="font-bold">
 								{data.slack.workspace ? 'Reconectar workspace' : 'Conectar con Slack'}
@@ -109,7 +100,8 @@
 								<p class="text-sm font-bold text-white">OAuth no configurado</p>
 								<p class="mt-1 text-xs text-[var(--text-muted-relaxed)]">
 									Agrega <code class="text-[var(--neon-green)]">SLACK_CLIENT_ID</code> y
-									<code class="text-[var(--neon-green)]">SLACK_CLIENT_SECRET</code> para habilitar la conexión.
+									<code class="text-[var(--neon-green)]">SLACK_CLIENT_SECRET</code> para habilitar la
+									conexión.
 								</p>
 							</div>
 						</div>
@@ -134,17 +126,46 @@
 								{data.slack.workspace.n8nSyncError}
 							</div>
 						{/if}
+
+						<div
+							class="mt-5 rounded-lg border border-[rgba(255,51,102,0.18)] bg-[rgba(255,51,102,0.05)] p-4"
+						>
+							<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+								<div>
+									<p class="text-sm font-bold text-white">Desconectar workspace</p>
+									<p class="mt-1 text-xs text-[var(--text-muted-relaxed)]">
+										Borra el workspace guardado y limpia los defaults y overrides de Slack en la
+										base de datos.
+									</p>
+								</div>
+
+								<form
+									method="POST"
+									action="?/disconnectWorkspace"
+									class="sm:min-w-[14rem]"
+									onsubmit={(event) => {
+										if (
+											!confirm(
+												'Esto eliminará el workspace de Slack y limpiará la configuración guardada en la base de datos. ¿Continuar?'
+											)
+										) {
+											event.preventDefault();
+										}
+									}}
+								>
+									<button type="submit" class="slack-disconnect-button w-full">
+										Desconectar workspace
+									</button>
+								</form>
+							</div>
+						</div>
 					{/if}
 				</div>
 			</div>
 		</section>
 
 		<!-- Preferences form -->
-		<form
-			method="POST"
-			action="?/savePreferences"
-			class="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]"
-		>
+		<form method="POST" action="?/savePreferences" class="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
 			<section class="terminal-window">
 				<div class="terminal-bar">
 					<div class="terminal-dots">
@@ -233,7 +254,11 @@
 							</label>
 						</div>
 
-						<SlackHighlightsLimitField name="topPackagesLimit" value={data.slack.defaults.topPackagesLimit} disabled={!includeTopPackages} />
+						<SlackHighlightsLimitField
+							name="topPackagesLimit"
+							value={data.slack.defaults.topPackagesLimit}
+							disabled={!includeTopPackages}
+						/>
 					</div>
 
 					<button type="submit" class="neon-button mt-6 w-full"> [ GUARDAR ] </button>
@@ -305,6 +330,40 @@
 	}
 
 	.slack-install-button:active {
+		transform: scale(0.98);
+	}
+
+	.slack-disconnect-button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 12px 18px;
+		border-radius: 12px;
+		border: 1px solid rgba(255, 51, 102, 0.45);
+		background: linear-gradient(135deg, rgba(255, 51, 102, 0.14), rgba(255, 82, 82, 0.08));
+		color: #ffd9e2;
+		font-size: 0.82rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		cursor: pointer;
+		transition:
+			transform 0.2s,
+			border-color 0.2s,
+			box-shadow 0.2s,
+			background 0.2s;
+	}
+
+	.slack-disconnect-button:hover {
+		transform: translateY(-1px);
+		border-color: rgba(255, 51, 102, 0.7);
+		background: linear-gradient(135deg, rgba(255, 51, 102, 0.2), rgba(255, 82, 82, 0.12));
+		box-shadow:
+			0 0 24px rgba(255, 51, 102, 0.18),
+			0 0 56px rgba(255, 51, 102, 0.08);
+	}
+
+	.slack-disconnect-button:active {
 		transform: scale(0.98);
 	}
 </style>

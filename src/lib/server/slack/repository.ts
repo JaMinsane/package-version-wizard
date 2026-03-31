@@ -5,6 +5,8 @@ import type {
 	SlackWorkspaceSnapshot
 } from '$lib/server/slack/types';
 
+type DatabaseClient = ReturnType<typeof getDb>;
+
 interface SlackWorkspaceRow {
 	id: string;
 	slack_team_id: string;
@@ -159,6 +161,27 @@ export async function upsertActiveSlackWorkspace(input: {
 	});
 
 	return getActiveSlackWorkspace();
+}
+
+export async function clearSlackWorkspaceInstallation() {
+	const db = getDb();
+
+	return db.begin(async (tx: DatabaseClient) => {
+		const deletedWorkspaces = await tx<{ id: string }[]>`
+			DELETE FROM slack_workspaces
+			RETURNING id
+		`;
+
+		await tx`
+			DELETE FROM project_notification_settings
+		`;
+
+		await tx`
+			DELETE FROM user_slack_preferences
+		`;
+
+		return deletedWorkspaces.length;
+	});
 }
 
 export async function updateSlackWorkspaceSyncStatus(input: {

@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 
 import type { Actions, PageServerLoad } from './$types';
 import {
+	disconnectSlackWorkspace,
 	getSlackSettingsPageData,
 	saveUserSlackPreferencesFromForm
 } from '$lib/server/slack/service';
@@ -30,6 +31,23 @@ export const actions: Actions = {
 
 			return {
 				successMessage: 'Configuración de Slack guardada.'
+			};
+		} catch (error) {
+			return fail(400, {
+				errorMessage: getFormErrorMessage(error)
+			});
+		}
+	},
+	disconnectWorkspace: async ({ locals }) => {
+		if (!locals.user) {
+			throw redirect(303, '/login');
+		}
+
+		try {
+			await disconnectSlackWorkspace();
+
+			return {
+				successMessage: 'Workspace de Slack desconectado y limpiado de la base de datos.'
 			};
 		} catch (error) {
 			return fail(400, {

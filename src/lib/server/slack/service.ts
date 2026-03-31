@@ -10,6 +10,7 @@ import {
 import { decryptSlackToken, encryptSlackToken } from '$lib/server/slack/crypto';
 import { syncManagedSlackCredential } from '$lib/server/slack/n8n';
 import {
+	clearSlackWorkspaceInstallation,
 	DEFAULT_SLACK_PREFERENCES,
 	getActiveSlackWorkspace,
 	getActiveSlackWorkspaceSecret,
@@ -110,6 +111,16 @@ export async function completeSlackInstallation(input: { code: string; userId: s
 	}
 
 	return getActiveSlackWorkspace();
+}
+
+export async function disconnectSlackWorkspace() {
+	const workspace = await getActiveSlackWorkspace();
+
+	if (!workspace) {
+		throw new Error('No hay un workspace de Slack conectado.');
+	}
+
+	await clearSlackWorkspaceInstallation();
 }
 
 export async function getSlackSettingsPageData(userId: string): Promise<SlackSettingsPageData> {
