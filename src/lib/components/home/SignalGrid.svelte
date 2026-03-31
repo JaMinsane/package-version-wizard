@@ -33,11 +33,10 @@
 		<div class="terminal-body">
 			<p class="section-label">Qué se obtiene</p>
 			<h2 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-				Señal útil antes de ejecutar cambios
+				Información clara antes de tocar código
 			</h2>
 			<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)] sm:text-base">
-				La interfaz organiza el resultado para que el equipo vea valor rápido sin perder
-				trazabilidad técnica.
+				El análisis organiza las dependencias por prioridad para que sepas qué mover primero.
 			</p>
 
 			<div class="mt-6 grid gap-4">
@@ -73,7 +72,7 @@
 						Una salida preparada para operar
 					</h2>
 				</div>
-				<span class="neon-badge neon-badge--muted"> Resumen + dependencias + evidencia </span>
+				<span class="neon-badge neon-badge--muted"> Brief AI + dependencias + fuentes </span>
 			</div>
 
 			<div class="mt-6 grid gap-4 md:grid-cols-3">
@@ -93,33 +92,32 @@
 			<div class="mt-6 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
 				<div class="rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.6)] p-5">
 					<p class="text-xs font-bold tracking-widest text-[var(--text-dim)] uppercase">
-						Vista principal
+						Pantalla de análisis
 					</p>
 					<div class="mt-4 grid gap-3">
 						<div class="data-cell">
 							<p class="text-sm font-bold text-white">Brief ejecutivo</p>
 							<p class="mt-2 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-								Resumen renderizado desde Markdown con una lectura clara para priorizar el trabajo.
+								Resumen AI en Markdown con las prioridades del upgrade.
 							</p>
 						</div>
 						<div class="data-cell">
-							<p class="text-sm font-bold text-white">Prioridades y dependencias</p>
+							<p class="text-sm font-bold text-white">Dependencias priorizadas</p>
 							<p class="mt-2 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-								Las tarjetas resaltan lo que requiere cambio ahora y lo que ya cubre el rango
-								declarado.
+								Ve qué requiere cambio real y qué ya cubre el rango declarado.
 							</p>
 						</div>
 					</div>
 				</div>
 
 				<div class="rounded-lg border border-[rgba(0,229,255,0.15)] bg-[rgba(0,229,255,0.04)] p-5">
-					<span class="neon-badge neon-badge--cyan">Notificación final</span>
+					<span class="neon-badge neon-badge--cyan">Slack</span>
 					<h3 class="mt-3 text-lg font-bold text-white">
-						Slack aparece al final, no en medio del análisis.
+						Slack solo entra al final.
 					</h3>
 					<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-						El upload y el brief siguen siendo el centro. Slack solo recibe la notificación final y
-						el link del análisis cuando ya existe algo útil que compartir.
+						Primero el análisis, después la notificación. Slack recibe el brief y el link del analisis cuando
+						ya hay algo útil que compartir.
 					</p>
 				</div>
 			</div>

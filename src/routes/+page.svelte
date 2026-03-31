@@ -5,10 +5,10 @@
 </script>
 
 <svelte:head>
-	<title>Package Version Wizard | Inteligencia visual para upgrades npm</title>
+	<title>Package Version Wizard | Analiza y prioriza upgrades npm</title>
 	<meta
 		name="description"
-		content="Sube tu package.json y revisa un análisis persistido con diff de dependencias, brief AI y notificación final opcional en Slack."
+		content="Sube tu package.json, compara versiones contra npm, recibe un brief AI y notifica a Slack."
 	/>
 </svelte:head>
 

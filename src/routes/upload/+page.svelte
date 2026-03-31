@@ -7,10 +7,10 @@
 </script>
 
 <svelte:head>
-	<title>Subir package.json | Package Version Wizard</title>
+	<title>Nuevo análisis | Package Version Wizard</title>
 	<meta
 		name="description"
-		content="Sube tu package.json para iniciar un análisis de dependencias con brief AI y notificación final opcional en Slack."
+		content="Sube tu package.json para analizar dependencias con brief AI y notificación opcional en Slack."
 	/>
 </svelte:head>
 
@@ -19,11 +19,11 @@
 		<div class="text-center">
 			<p class="section-label">Nuevo análisis</p>
 			<h1 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-4xl">
-				Sube tu manifiesto
+				Sube tu package.json
 			</h1>
 			<p class="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[var(--text-muted-relaxed)]">
-				Carga tu <code class="text-[var(--neon-green)]">package.json</code> para iniciar el análisis de
-				dependencias, obtener un brief AI y publicar el resultado final en Slack si lo tienes configurado.
+				Selecciona el archivo, espera el análisis y revisa el brief.
+				Si tienes Slack configurado, la notificación sale automáticamente.
 			</p>
 			<div class="mt-5 flex justify-center">
 				<a

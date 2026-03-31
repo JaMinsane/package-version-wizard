@@ -45,7 +45,7 @@
 
 	{#if dependency.deprecated}
 		<div class="alert-box alert-box--red mt-4">
-			Este paquete aparece como deprecated y merece atención prioritaria.
+			Este paquete está deprecated. Requiere atención prioritaria.
 		</div>
 	{/if}
 

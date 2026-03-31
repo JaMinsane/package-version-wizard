@@ -63,11 +63,10 @@
 			<div class="max-w-2xl">
 				<p class="section-label">Entrada</p>
 				<h2 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-					Inicia una corrida nueva
+					Nuevo análisis
 				</h2>
 				<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)] sm:text-base">
-					El formulario mantiene la experiencia simple. La configuración de Slack vive aparte y el
-					análisis conserva una salida limpia, persistida y compartible.
+					Sube tu package.json y obtén el reporte. La integración con Slack es opcional y se configura en tu perfil.
 				</p>
 			</div>
 
@@ -128,8 +127,7 @@
 						</p>
 						<h3 class="mt-3 text-xl font-bold text-white">package.json</h3>
 						<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-							Sube el manifiesto principal del proyecto. La app lo valida y prepara la corrida sin
-							exponer lógica sensible en el cliente.
+							Sube el archivo principal del proyecto. Se valida y procesa en el servidor.
 						</p>
 					</div>
 					<span class="neon-badge neon-badge--cyan">Límite 1 MB</span>
@@ -162,11 +160,10 @@
 						<p class="text-xs font-bold tracking-widest text-[var(--text-muted-relaxed)] uppercase">
 							Notificaciones
 						</p>
-						<h3 class="mt-3 text-xl font-bold text-white">Slack opcional</h3>
+						<h3 class="mt-3 text-xl font-bold text-white">Notificaciones Slack</h3>
 						<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-							El análisis no depende de Slack. Si quieres notificaciones finales, ábrelo desde tu
-							menú de usuario o usa este acceso directo y luego ajusta el canal por proyecto en la
-							vista del análisis.
+							El análisis funciona sin Slack. Si quieres recibir notificaciones, configúralo
+							desde el menú de usuario o con el acceso directo de abajo.
 						</p>
 					</div>
 					<a href="/settings/integrations/slack" class="neon-badge neon-badge--green">
@@ -179,8 +176,8 @@
 						Salida esperada
 					</p>
 					<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-						La corrida devuelve progreso persistido, dependencias priorizadas, brief renderizado y,
-						si Slack está activo, un mensaje final con deep link al análisis completo.
+						Al terminar obtienes: dependencias priorizadas, brief AI y, si Slack está activo,
+						un mensaje con el link al análisis.
 					</p>
 				</div>
 			</div>
@@ -201,8 +198,7 @@
 
 				{#if !analysisReady}
 					<div class="alert-box alert-box--amber mt-4">
-						Completa Postgres, el webhook privado y el callback firmado antes de lanzar corridas
-						reales.
+						Configura Postgres, el webhook de n8n y el callback antes de lanzar análisis.
 					</div>
 				{/if}
 			</div>

@@ -28,19 +28,18 @@
 				<h1
 					class="mt-6 max-w-4xl text-3xl font-bold tracking-tight text-white sm:text-4xl xl:text-5xl"
 				>
-					Convierte un <span
+					Convierte tu <span
 						class="text-[var(--neon-green)]"
 						style="text-shadow: 0 0 20px rgba(15,255,106,0.4)">package.json</span
 					>
-					en una lectura clara de qué actualizar, qué probar y qué notificar<span
+					en una lectura clara de qué actualizar, qué probar y qué puede esperar<span
 						class="cursor-blink"
 					></span>
 				</h1>
 
 				<p class="mt-6 max-w-2xl text-sm leading-7 text-[var(--text-muted-relaxed)] sm:text-base">
-					Una interfaz enfocada en operación: subes el manifiesto, obtienes señal priorizada del
-					registry de npm, revisas un brief técnico y dejas lista la notificación final para el
-					canal correcto.
+					Sube tu archivo, obtén un diff de versiones recientes, un brief AI con prioridades y estrategias por etapas
+					y, si quieres, una notificación en tu canal de Slack cuando el analisis termine.
 				</p>
 			</div>
 

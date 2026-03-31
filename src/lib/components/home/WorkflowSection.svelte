@@ -17,11 +17,10 @@
 			<div class="max-w-2xl">
 				<p class="section-label">Flujo</p>
 				<h2 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-					Una secuencia corta, una lectura más útil
+					Tres pasos, un resultado accionable
 				</h2>
 				<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)] sm:text-base">
-					La experiencia se enfoca en mostrar progreso, decisión y continuidad sin añadir pasos
-					superfluos.
+					Sube, espera el análisis y revisa. Sin configuración extra.
 				</p>
 			</div>
 			<span class="neon-badge neon-badge--muted">SSR · server-first · URL compartible</span>

@@ -29,7 +29,7 @@ export const actions: Actions = {
 			await saveUserSlackPreferencesFromForm(locals.user.id, formData);
 
 			return {
-				successMessage: 'La configuración por defecto de Slack quedó guardada.'
+				successMessage: 'Configuración de Slack guardada.'
 			};
 		} catch (error) {
 			return fail(400, {
@@ -41,8 +41,8 @@ export const actions: Actions = {
 
 function getFormErrorMessage(error: unknown) {
 	if (error instanceof ZodError) {
-		return error.issues[0]?.message ?? 'Revisa la configuración de Slack.';
+		return error.issues[0]?.message ?? 'Revisa los campos de Slack.';
 	}
 
-	return error instanceof Error ? error.message : 'No se pudo guardar la configuración de Slack.';
+	return error instanceof Error ? error.message : 'Error al guardar la configuración de Slack.';
 }

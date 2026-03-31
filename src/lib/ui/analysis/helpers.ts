@@ -12,18 +12,18 @@ import type { AnalysisDependency, DependencyDisplayStatus } from '$lib/ui/analys
 
 export const analysisStatusLabels: Record<AnalysisStatus, string> = {
 	queued: 'En cola',
-	enriching: 'Resolviendo metadatos',
+	enriching: 'Consultando npm',
 	summarizing: 'Generando brief',
-	completed: 'Listo para revisión',
-	failed: 'Análisis fallido'
+	completed: 'Listo',
+	failed: 'Fallido'
 };
 
 export const analysisStatusDescriptions: Record<AnalysisStatus, string> = {
-	queued: 'La corrida fue creada y quedó persistida. El procesamiento ya puede retomarse desde esta URL.',
-	enriching: 'La app consulta el registry, normaliza versiones y prepara el contexto técnico.',
-	summarizing: 'El workflow externo está armando el brief y las recomendaciones de ejecución.',
-	completed: 'La corrida ya tiene resumen renderizado, dependencias priorizadas y evidencia disponible.',
-	failed: 'El flujo terminó con error. La corrida conserva suficiente contexto para revisar qué ocurrió.'
+	queued: 'El análisis fue creado y se puede retomar desde esta URL.',
+	enriching: 'Consultando versiones en npm y preparando el contexto técnico.',
+	summarizing: 'El workflow externo está armando el brief y las recomendaciones.',
+	completed: 'Brief, dependencias priorizadas y fuentes disponibles.',
+	failed: 'La corrida terminó con error. El contexto se conserva para diagnóstico.'
 };
 
 export function formatTimestamp(value?: string) {
@@ -262,12 +262,12 @@ export function getEvidenceMessage(brief: Partial<PackageBrief>) {
 	const confidence = brief.confidence ?? 'low';
 
 	if (evidenceStatus === 'verified') {
-		return `Brief respaldado por fuentes verificadas. ${getConfidenceLabel(confidence)}.`;
+		return `Respaldado por fuentes verificadas. ${getConfidenceLabel(confidence)}.`;
 	}
 
 	if (evidenceStatus === 'partial') {
-		return 'La investigación encontró evidencia parcial. Conviene revisar las fuentes antes de ejecutar cambios sensibles.';
+		return 'Evidencia parcial. Revisa las fuentes antes de ejecutar cambios sensibles.';
 	}
 
-	return 'No hubo evidencia suficiente para afirmar cambios delicados con respaldo verificable.';
+	return 'Sin evidencia suficiente para respaldar cambios críticos.';
 }

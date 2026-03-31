@@ -3,44 +3,44 @@ import type { FlowStep, HeroStat, ReadinessItemDefinition, StoryCard } from '$li
 export const homeHeroStats: HeroStat[] = [
 	{
 		value: '1 upload',
-		label: 'Manifiesto listo para analizar',
+		label: 'Tu package.json, analizado',
 		description:
-			'El flujo parte de un `package.json` real y mantiene el procesamiento del lado del servidor.'
+			'Sube el archivo y el servidor se encarga de consultar npm, comparar versiones y generar el reporte.'
 	},
 	{
 		value: '3 capas',
 		label: 'Diff, brief y notificación',
 		description:
-			'Registry, resumen ejecutivo y salida por canal quedan alineados en una misma corrida persistida.'
+			'Versiones comparadas, resumen AI con prioridades y notificación opcional a Slack en una sola corrida.'
 	},
 	{
 		value: 'URL viva',
-		label: 'Resultado listo para compartir',
+		label: 'Compartible al instante',
 		description:
-			'El análisis se guarda, se puede volver a abrir y deja listo el deep link para Slack.'
+			'Cada análisis se persiste con su propia URL. Ábrelo de nuevo, compártelo o envíalo por Slack.'
 	}
 ];
 
 export const homeStoryCards: StoryCard[] = [
 	{
-		eyebrow: 'Señal inmediata',
-		title: 'Las dependencias dejan de ser una lista plana.',
+		eyebrow: 'Señal clara',
+		title: 'Tus dependencias, priorizadas.',
 		description:
-			'El manifiesto se convierte en un mapa priorizado con cambios major, rangos que ya resuelven la latest y paquetes que merecen revisión real.',
+			'Cada paquete se clasifica por tipo de cambio: major, minor, patch o deprecated. Sabes al tiro qué merece atención.',
 		accent: 'cyan'
 	},
 	{
-		eyebrow: 'Resultado operativo',
-		title: 'El brief aterriza qué mover primero.',
+		eyebrow: 'Brief AI',
+		title: 'Un resumen que te dice qué mover primero.',
 		description:
-			'Las fases de upgrade y el contexto por paquete llegan listas para orientar pruebas, coordinación y riesgo técnico.',
+			'El brief agrupa los upgrades en fases, indica riesgos y sugiere un orden de ejecución basado en impacto.',
 		accent: 'violet'
 	},
 	{
-		eyebrow: 'Notificación final',
-		title: 'El resultado también puede aterrizar en Slack.',
+		eyebrow: 'Slack',
+		title: 'El resultado llega a tu canal.',
 		description:
-			'El brief ejecutivo y el enlace al análisis completo llegan al canal configurado cuando la corrida termina.',
+			'Si conectas Slack, el brief y el link al análisis se publican automáticamente cuando la corrida termina.',
 		accent: 'emerald'
 	}
 ];
@@ -48,23 +48,23 @@ export const homeStoryCards: StoryCard[] = [
 export const homeOutputCards: StoryCard[] = [
 	{
 		eyebrow: 'Resumen',
-		title: 'Brief ejecutivo sanitizado',
+		title: 'Brief ejecutivo',
 		description:
-			'Un bloque legible para producto, plataforma y frontend, con lenguaje claro y orientado a ejecución.',
+			'Texto claro y directo para producto, plataforma o frontend. Sin jerga innecesaria.',
 		accent: 'amber'
 	},
 	{
 		eyebrow: 'Fases',
-		title: 'Waves accionables',
+		title: 'Plan de upgrade por waves',
 		description:
-			'Los paquetes se agrupan por impacto para reducir fricción al momento de ejecutar el upgrade.',
+			'Los paquetes se agrupan por impacto para que ejecutes el upgrade en orden y con menos riesgo.',
 		accent: 'cyan'
 	},
 	{
 		eyebrow: 'Trazabilidad',
 		title: 'Fuentes y evidencia',
 		description:
-			'Cada recomendación puede rastrearse hasta releases, changelogs y documentación relevante.',
+			'Cada recomendación apunta a releases, changelogs o docs. Nada se queda en el aire.',
 		accent: 'violet'
 	}
 ];
@@ -72,37 +72,37 @@ export const homeOutputCards: StoryCard[] = [
 export const homeFlowSteps: FlowStep[] = [
 	{
 		index: '01',
-		title: 'Sube el manifiesto',
+		title: 'Sube el archivo',
 		description:
-			'El punto de entrada sigue siendo un formulario nativo, rápido y compatible con SSR.',
-		detail: 'La app valida el archivo, preserva el estado del formulario y prepara la corrida.'
+			'Selecciona tu package.json. La app lo valida y arranca el análisis en el servidor.',
+		detail: 'Formulario nativo, SSR-friendly. Sin pasos extra.'
 	},
 	{
 		index: '02',
-		title: 'Resuelve el árbol',
+		title: 'Se consulta npm',
 		description:
-			'El servidor consulta npm, normaliza versiones declaradas y deja la corrida lista para enriquecimiento externo.',
-		detail: 'El webhook privado y el callback firmado mantienen el procesamiento fuera del cliente.'
+			'El servidor compara cada dependencia contra el registry y prepara el contexto para el brief AI.',
+		detail: 'Webhook privado + callback firmado. Todo server-side.'
 	},
 	{
 		index: '03',
-		title: 'Revisa y notifica',
+		title: 'Revisa y comparte',
 		description:
-			'La vista de análisis consolida brief, dependencias críticas, evidencia y la configuración Slack por proyecto.',
+			'Abre el análisis, revisa el brief y las dependencias. Si Slack está activo, la notificación sale sola.',
 		detail:
-			'Si Slack está activo, n8n publica la notificación final en el canal elegido con deep link incluido.'
+			'Deep link incluido en el mensaje de Slack.'
 	}
 ];
 
 export const readinessItemDefinitions: ReadinessItemDefinition[] = [
 	{
 		key: 'databaseConfigured',
-		label: 'Postgres persistido',
+		label: 'Postgres',
 		description: '`DATABASE_URL`'
 	},
 	{
 		key: 'webhookConfigured',
-		label: 'Webhook privado de n8n',
+		label: 'Webhook n8n',
 		description: '`N8N_ANALYSIS_WEBHOOK_URL` + token'
 	},
 	{
@@ -112,7 +112,7 @@ export const readinessItemDefinitions: ReadinessItemDefinition[] = [
 	},
 	{
 		key: 'publicAppConfigured',
-		label: 'Links públicos',
+		label: 'URL pública',
 		description: '`APP_BASE_URL`'
 	}
 ];

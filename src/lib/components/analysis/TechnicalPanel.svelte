@@ -11,7 +11,7 @@
 	<summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 sm:px-6">
 		<div>
 			<p class="section-label">Panel técnico</p>
-			<h2 class="mt-2 text-xl font-bold text-white">Payload y callback crudos</h2>
+			<h2 class="mt-2 text-xl font-bold text-white">Payload y callback (raw)</h2>
 		</div>
 		<span class="text-sm font-bold text-[var(--neon-green)] transition group-open:rotate-45">+</span>
 	</summary>

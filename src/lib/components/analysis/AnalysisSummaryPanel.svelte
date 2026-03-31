@@ -26,7 +26,7 @@
 				<h2 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">Resumen ejecutivo</h2>
 			</div>
 			{#if analysis.status === 'completed'}
-				<span class="neon-badge neon-badge--green">Listo para revisar</span>
+				<span class="neon-badge neon-badge--green">Disponible</span>
 			{/if}
 		</div>
 
@@ -40,10 +40,9 @@
 			</div>
 		{:else if analysis.status === 'failed'}
 			<div class="alert-box alert-box--red mt-6">
-				<p class="text-base font-bold">El brief no se pudo completar.</p>
+				<p class="text-base font-bold">El brief no se pudo completar</p>
 				<p class="mt-2 text-sm leading-7 opacity-80">
-					La corrida conserva el contexto técnico disponible para depurar el problema sin perder el
-					rastro del análisis.
+					El análisis conserva el contexto técnico para diagnosticar el problema.
 				</p>
 			</div>
 		{:else}

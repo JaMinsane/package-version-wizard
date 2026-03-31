@@ -106,7 +106,7 @@
 	<title>{activeAnalysis.project.name} | Package Version Wizard</title>
 	<meta
 		name="description"
-		content="Vista persistida del análisis de dependencias, con progreso, brief AI y notificación opcional en Slack."
+		content="Análisis de dependencias con brief AI y notificación Slack."
 	/>
 </svelte:head>
 
@@ -128,18 +128,18 @@
 				<AnalysisSummaryPanel analysis={activeAnalysis} />
 
 				<DependencySection
-					eyebrow="Dependencias críticas"
-					title="Lo primero que conviene mover"
-					description="Estas dependencias requieren cambio real en el manifiesto o revisión manual prioritaria antes de avanzar."
+					eyebrow="Requieren acción"
+					title="Dependencias que conviene mover"
+					description="Requieren cambio en el package.json o revisión manual antes de avanzar."
 					items={criticalDependencies}
-					emptyMessage="No hay dependencias que requieran cambio real en el manifiesto o revisión manual prioritaria."
+					emptyMessage="Ninguna dependencia requiere cambio inmediato en el package.json."
 				/>
 
 				{#if coveredBySpecDependencies.length}
 					<DependencySection
-						eyebrow="Rangos alineados"
-						title="Ya resueltas por el manifiesto"
-						description="Estas dependencias ya quedan resueltas por el rango declarado o alineadas con la latest del registry. No requieren cambios inmediatos en `package.json`."
+						eyebrow="Cubiertas por el rango"
+						title="Ya resueltas por el package.json"
+						description="El rango declarado ya cubre la latest o están alineadas. No requieren cambios."
 						items={coveredBySpecDependencies}
 						emptyMessage=""
 					/>
@@ -156,7 +156,7 @@
 							<span class="terminal-title">$ briefs --all</span>
 						</div>
 						<div class="terminal-body">
-							<p class="section-label">Paquetes explicados</p>
+							<p class="section-label">Detalle por paquete</p>
 							<h2 class="mt-3 text-2xl font-bold tracking-tight text-white">
 								Contexto por paquete
 							</h2>

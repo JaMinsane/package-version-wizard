@@ -42,7 +42,7 @@
 			<span class="terminal-title">$ status</span>
 		</div>
 		<div class="terminal-body">
-			<p class="section-label">Progreso</p>
+			<p class="section-label">Estado</p>
 			<div class="mt-4 flex items-start justify-between gap-4">
 				<div>
 					<h2 class="text-xl font-bold text-white">{analysisStatusLabels[analysis.status]}</h2>
@@ -75,7 +75,7 @@
 					<span
 						class="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-[var(--neon-cyan)] shadow-[0_0_6px_var(--neon-cyan)]"
 					></span>
-					La página sigue consultando el estado en segundo plano.
+					Consultando estado en segundo plano.
 				</div>
 			{/if}
 
@@ -101,11 +101,9 @@
 						</p>
 					</div>
 					<div>
-						<p class="text-xs tracking-widest text-[var(--text-dim)] uppercase">
-							Clave de idempotencia
-						</p>
+						<p class="text-xs tracking-widest text-[var(--text-dim)] uppercase">Clave de idempotencia</p>
 						<p class="mt-2 text-xs leading-6 break-all text-[var(--text-muted-relaxed-relaxed)]">
-							{analysis.lastIdempotencyKey ?? 'Aún no llegó callback'}
+							{analysis.lastIdempotencyKey ?? 'Sin callback aún'}
 						</p>
 					</div>
 				</div>
@@ -144,8 +142,7 @@
 			</div>
 
 			<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed-relaxed)]">
-				La corrida puede publicar el brief ejecutivo y el link del análisis completo en el canal
-				configurado para este proyecto.
+				Al completarse, el brief y el link se publican en el canal configurado.
 			</p>
 
 			<div class="mt-6 grid gap-3">
@@ -187,11 +184,10 @@
 
 					{#if inheritUserDefaults}
 						<div class="alert-box alert-box--cyan">
-							Este proyecto hereda la configuración global guardada en
+							Usando la configuración global de
 							<a href="/settings/integrations/slack" class="underline decoration-dotted">
-								Integración Slack
-							</a>
-							.
+								Slack
+							</a>.
 						</div>
 					{:else}
 						<label class="neon-badge neon-badge--green cursor-pointer">
@@ -293,21 +289,20 @@
 
 				{#if !slack.workspace}
 					<div class="alert-box alert-box--amber mt-4">
-						Conecta Slack en <a
+					Conecta Slack en <a
 							href="/settings/integrations/slack"
 							class="underline decoration-dotted">settings</a
 						>
-						antes de activar notificaciones para este proyecto.
+						para activar notificaciones.
 					</div>
 				{:else if slack.workspace.n8nSyncStatus !== 'synced'}
 					<div class="alert-box alert-box--amber mt-4">
-						Slack está conectado, pero la credencial administrada todavía no quedó sincronizada con
-						n8n.
+						Slack está conectado, pero la credencial aún no quedó sincronizada con n8n.
 					</div>
 				{/if}
 			{:else}
 				<div class="alert-box alert-box--cyan mt-6">
-					La configuración de Slack de este proyecto solo está disponible para el owner autenticado.
+					Solo el owner autenticado puede gestionar la configuración de Slack de este proyecto.
 				</div>
 			{/if}
 		</div>

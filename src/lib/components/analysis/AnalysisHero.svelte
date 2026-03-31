@@ -30,7 +30,7 @@
 					← Volver al inicio
 				</a>
 
-				<p class="section-label mt-6">Corrida persistida</p>
+				<p class="section-label mt-6">Análisis</p>
 				<h1 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-4xl">
 					{analysis.project.name}
 				</h1>
@@ -41,7 +41,7 @@
 						v{analysis.manifestVersion}
 					{/if}
 					<span class="mx-2 text-[var(--text-dim)]">·</span>
-					{analysis.stats.total} dependencias detectadas
+					{analysis.stats.total} dependencias
 				</p>
 			</div>
 
@@ -53,7 +53,7 @@
 						rel="noreferrer"
 						class="neon-badge neon-badge--muted transition-all hover:border-[rgba(15,255,106,0.3)] hover:text-[var(--neon-green)]"
 					>
-						Abrir URL pública
+						Ver URL pública
 					</a>
 				{/if}
 
@@ -65,7 +65,7 @@
 
 		<div class="mt-8 grid gap-4 lg:grid-cols-4">
 			<div class="data-cell">
-				<p class="text-xs font-bold uppercase tracking-widest text-[var(--text-dim)]">Pendientes</p>
+				<p class="text-xs font-bold uppercase tracking-widest text-[var(--text-dim)]">Pendientes de upgrade</p>
 				<p class="mt-3 text-2xl font-bold text-white">{analysis.stats.outdated}</p>
 			</div>
 			<div class="data-cell">
