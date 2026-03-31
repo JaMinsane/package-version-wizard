@@ -10,12 +10,12 @@
 	<title>Nuevo análisis | Package Version Wizard</title>
 	<meta
 		name="description"
-		content="Sube tu package.json para analizar dependencias con brief AI."
+		content="Sube tu package.json para analizar dependencias con brief AI y notificación opcional al final en Slack."
 	/>
 </svelte:head>
 
 <div class="min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-	<div class="mx-auto flex max-w-2xl flex-col gap-6 sm:gap-8">
+	<div class="mx-auto flex max-w-4xl flex-col gap-6 sm:gap-8">
 		<UploadStudio environmentReady={data.environmentReady} formMessage={form?.message} />
 	</div>
 </div>

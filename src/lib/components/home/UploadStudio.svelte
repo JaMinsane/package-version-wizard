@@ -18,6 +18,26 @@
 	let showReadiness = $state(false);
 	let fileInputRef: HTMLInputElement | undefined = $state(undefined);
 
+	const uploadHighlights = [
+		{
+			label: 'Entrada',
+			title: 'Un package.json por análisis',
+			description: 'Lo validamos y procesamos del lado del servidor antes de consultar versiones.'
+		},
+		{
+			label: 'Salida',
+			title: 'Brief AI con prioridades',
+			description:
+				'Recibes dependencias relevantes, contexto de upgrades y un resumen listo para revisar.'
+		},
+		{
+			label: 'Slack',
+			title: 'Opcional y al final',
+			description:
+				'La notificación solo se envía al terminar el flujo y requiere configuración previa.'
+		}
+	] as const;
+
 	const analysisReady = $derived(
 		environmentReady.databaseConfigured &&
 			environmentReady.webhookConfigured &&
@@ -83,12 +103,69 @@
 	</div>
 
 	<div class="terminal-body">
+		<div class="grid gap-6 xl:grid-cols-[1.18fr_0.82fr] xl:items-start">
+			<div class="max-w-3xl">
+				<div class="flex flex-wrap items-center gap-3">
+					<span class="neon-badge neon-badge--green">
+						<span
+							class="inline-block h-2 w-2 rounded-full bg-[var(--neon-green)] shadow-[0_0_6px_var(--neon-green)]"
+						></span>
+						Nuevo análisis
+					</span>
+					<span class="neon-badge neon-badge--muted">Upload + análisis server-side</span>
+				</div>
+
+				<p class="section-label mt-6">Entrada</p>
+				<h2 class="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+					Sube tu package.json y obtén un brief de upgrade claro y accionable
+				</h2>
+				<p class="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-muted-relaxed)] sm:text-base">
+					Analizamos dependencias, detectamos versiones más nuevas y armamos un resumen para
+					priorizar el upgrade. Slack es opcional: si lo configuras antes, la notificación sale
+					siempre al final; si no, el análisis funciona igual.
+				</p>
+			</div>
+
+			<aside class="upload-side-note">
+				<div class="flex items-center justify-between gap-3">
+					<p class="section-label">Slack</p>
+					<span class="neon-badge neon-badge--cyan">Opcional</span>
+				</div>
+				<h3 class="mt-3 text-lg font-semibold text-white">Notificación de cierre</h3>
+				<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
+					Si quieres aviso en tu canal, configura la integración antes de analizar. El mensaje no
+					sale a mitad del flujo: solo cuando el procesamiento termina.
+				</p>
+				<a
+					href="/settings/integrations/slack"
+					class="upload-side-link mt-5 inline-flex items-center gap-2"
+				>
+					<span>$ open</span>
+					<span>Configurar Slack</span>
+				</a>
+			</aside>
+		</div>
+
+		<div class="mt-6 grid gap-3 md:grid-cols-3">
+			{#each uploadHighlights as item}
+				<article class="upload-highlight">
+					<p class="text-xs font-bold tracking-[0.24em] text-[var(--text-dim)] uppercase">
+						{item.label}
+					</p>
+					<h3 class="mt-3 text-sm font-semibold text-white sm:text-base">{item.title}</h3>
+					<p class="mt-2 text-sm leading-6 text-[var(--text-muted-relaxed)]">
+						{item.description}
+					</p>
+				</article>
+			{/each}
+		</div>
+
 		<form
 			method="POST"
 			action="?/analyzePackageJson"
 			enctype="multipart/form-data"
 			use:enhance={enhanceUpload}
-			class="flex flex-col gap-6"
+			class="mt-8 flex flex-col gap-6"
 		>
 			<!-- Drop zone -->
 			<div
@@ -127,18 +204,22 @@
 				{:else}
 					<div class="flex flex-col items-center gap-3">
 						<span class="upload-icon">↑</span>
-						<p class="text-base font-semibold text-white">
-							Arrastra tu package.json aquí
-						</p>
+						<p class="text-base font-semibold text-white">Arrastra tu package.json aquí</p>
 						<p class="text-xs text-[var(--text-dim)]">
-							o haz click para seleccionarlo <span class="text-[var(--text-muted-relaxed)]">· máx 1 MB</span>
+							o haz click para seleccionarlo <span class="text-[var(--text-muted-relaxed)]"
+								>· máx 1 MB</span
+							>
 						</p>
 					</div>
 				{/if}
 			</div>
 
 			<!-- Submit -->
-			<button type="submit" class="neon-button w-full" disabled={!analysisReady || isSubmitting || !selectedFileName}>
+			<button
+				type="submit"
+				class="neon-button w-full"
+				disabled={!analysisReady || isSubmitting || !selectedFileName}
+			>
 				<span
 					class={`inline-block h-2.5 w-2.5 rounded-full bg-[#0a0a0f] ${isSubmitting ? 'animate-pulse' : ''}`}
 				></span>
@@ -170,13 +251,13 @@
 				<span
 					class="inline-block h-1.5 w-1.5 rounded-full bg-[var(--neon-green)] shadow-[0_0_6px_var(--neon-green)]"
 				></span>
-				Stack status
+				Estado del stack
 			</button>
 			<a
 				href="/settings/integrations/slack"
 				class="neon-badge neon-badge--muted text-xs transition-all hover:border-[rgba(0,229,255,0.4)] hover:text-[var(--neon-cyan)]"
 			>
-				Slack config →
+				Configurar Slack →
 			</a>
 		</div>
 
@@ -206,6 +287,49 @@
 </section>
 
 <style>
+	.upload-side-note {
+		border-radius: 0.9rem;
+		border: 1px solid rgba(0, 229, 255, 0.18);
+		background:
+			linear-gradient(145deg, rgba(0, 229, 255, 0.08), rgba(15, 255, 106, 0.04)),
+			rgba(10, 10, 15, 0.72);
+		padding: 1.25rem;
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.03),
+			0 0 30px rgba(0, 229, 255, 0.06);
+	}
+
+	.upload-side-link {
+		border-radius: 0.65rem;
+		border: 1px solid rgba(0, 229, 255, 0.22);
+		background: rgba(0, 229, 255, 0.06);
+		padding: 0.7rem 0.95rem;
+		font-size: 0.82rem;
+		font-weight: 700;
+		color: var(--neon-cyan);
+		letter-spacing: 0.04em;
+		transition:
+			border-color 0.2s ease,
+			background 0.2s ease,
+			transform 0.2s ease,
+			box-shadow 0.2s ease;
+	}
+
+	.upload-side-link:hover {
+		border-color: rgba(0, 229, 255, 0.42);
+		background: rgba(0, 229, 255, 0.1);
+		box-shadow: 0 0 20px rgba(0, 229, 255, 0.1);
+		transform: translateY(-1px);
+	}
+
+	.upload-highlight {
+		border-radius: 0.75rem;
+		border: 1px solid var(--border-green);
+		background:
+			linear-gradient(180deg, rgba(15, 255, 106, 0.04), transparent 60%), rgba(10, 10, 15, 0.58);
+		padding: 1rem 1rem 1.1rem;
+	}
+
 	.upload-drop-zone {
 		display: flex;
 		align-items: center;
