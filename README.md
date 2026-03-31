@@ -1,121 +1,100 @@
 # Package Version Wizard
 
-Package Version Wizard es un copiloto de upgrades para proyectos npm. El usuario sube su `package.json` y la app ejecuta un flujo full-stack: valida y parsea el archivo en el servidor, consulta el registro de npm para detectar dependencias outdated, major y deprecated, prioriza el riesgo y dispara un workflow en `n8n` para generar un brief AI accionable. Además, la plataforma incluye login y base de datos para proteger el flujo de subida y la configuración de integraciones, así como para persistir usuarios, proyectos, análisis y preferencias de notificación, de modo que cada resultado quede asociado a su usuario y pueda consultarse después.
+Package Version Wizard es una app SSR para analizar `package.json` de proyectos npm. El flujo real del repo valida y parsea el archivo en servidor, consulta el registry de npm para enriquecer dependencias, persiste el análisis en Postgres, dispara un workflow privado de `n8n` y presenta un brief AI con plan de upgrade, detalle por paquete, fuentes y estado de notificación opcional en Slack.
 
-El resultado no es solo una lista de versiones nuevas: cada análisis queda persistido con una URL compartible e incluye resumen ejecutivo, plan de upgrade por fases, detalle por paquete, fuentes trazables y una separación clara entre lo que realmente requiere cambio en el `package.json` y lo que ya está cubierto por el rango declarado. Además, de forma opcional, puede enviar el AI brief final a Slack con el link del análisis.
-
-Stack principal: SSR web basada en `SvelteKit + Bun + TypeScript + Tailwind CSS` y backend con `Postgres + n8n + Slack API`.
-
-## Estado actual del producto
+## Qué incluye hoy
 
 - Landing pública en `/`
-- Upload autenticado en `/upload`
 - Login y registro en `/login`
-- Vista pública compartible en `/analysis/[id]`
-- Configuración autenticada de Slack en `/settings/integrations/slack`
-- Callback interno firmado desde `n8n` en `/api/internal/n8n/callback`
+- Upload autenticado en `/upload`
+- Vista pública y compartible en `/analysis/[id]`
+- Polling del análisis vía `/api/analyses/[id]`
+- Callback de `n8n` verificado con secreto compartido en `/api/internal/n8n/callback`
+- Integración Slack autenticada en `/settings/integrations/slack`
+- Healthcheck en `/health`
 
-## Flujo end-to-end
+## Stack real
 
-1. El usuario autenticado sube un `package.json`.
-2. SvelteKit valida el archivo y persiste `project`, `analysis` y `analysis_dependencies`.
-3. El backend resuelve `notificationContext.slack` desde:
-   - workspace Slack instalado
-   - defaults del usuario
-   - override opcional del proyecto
-4. La app llama el webhook privado `dependency-analysis` de `n8n`.
-5. `n8n` investiga paquetes críticos, sintetiza el brief final y, si Slack está habilitado, publica el resultado con el nodo oficial de Slack.
-6. `n8n` hace callback firmado a la app con:
-   - `executiveSummaryMd`
-   - `upgradePlan`
-   - `packageBriefs`
-   - `sources`
-   - `slackDigestMd`
-   - `slackNotification`
-7. La vista `/analysis/[id]` muestra el resultado y el estado del último envío a Slack.
+- `SvelteKit 2` + `Svelte 5`
+- `TypeScript`
+- `Tailwind CSS v4`
+- `Bun`
+- `Postgres` mediante `Bun.SQL`
+- `n8n` para orquestación del brief y la investigación por paquete
+- `Slack OAuth` + publicación desde `n8n`
+- `Docker` + `GHCR` + `Dokploy`
 
-## Producción
+## Flujo principal
 
-El flujo recomendado para VPS + Dokploy ya no es compilar en el servidor. La app está preparada para:
+1. Un usuario autenticado sube un `package.json`.
+2. El servidor valida el archivo, extrae dependencias y consulta npm para resolver versiones, riesgo y casos de revisión manual.
+3. La app persiste `projects`, `analyses` y `analysis_dependencies`.
+4. El backend construye el payload para `n8n`, incluyendo el contexto efectivo de Slack.
+5. `n8n` sintetiza el brief, produce `upgradePlan`, `packageBriefs` y `sources`, y opcionalmente publica un mensaje en Slack.
+6. `n8n` devuelve el resultado por callback protegido con secreto compartido.
+7. La vista `/analysis/[id]` muestra el resumen renderizado, las dependencias priorizadas, el payload técnico y el estado de Slack.
 
-1. construir la imagen en GitHub Actions
-2. publicar la imagen en GHCR
-3. disparar el deploy en Dokploy vía API
+## Quickstart
 
-La guía operativa completa está en [`DEPLOYMENT.md`](./DEPLOYMENT.md).
+Requisitos mínimos:
 
-Si necesitas validar localmente el runtime productivo:
+- `Bun`
+- una base de datos PostgreSQL accesible
+- variables de entorno configuradas
+
+Instalación y desarrollo:
 
 ```bash
+bun install
+bun run db:migrate
+bun run dev
+```
+
+Validación:
+
+```bash
+bun run check
 bun run build
+```
+
+Arranque del build productivo local:
+
+```bash
 bun run start
 ```
 
-También puedes arrancar directamente el output de `adapter-node` con `node build/index.js`.
+El runtime productivo de este repo se ejecuta con Bun. `node build/index.js` no es el comando principal válido porque la capa de datos depende de `Bun.SQL`.
+
+## Variables de entorno
+
+### Core analysis
+
+- `DATABASE_URL`
+- `N8N_ANALYSIS_WEBHOOK_URL`
+- `N8N_ANALYSIS_WEBHOOK_TOKEN`
+- `N8N_CALLBACK_SECRET`
+
+### Recomendadas para URLs compartibles y OAuth
+
+- `APP_BASE_URL`
+
+### Opcionales para Slack
+
+- `SLACK_CLIENT_ID`
+- `SLACK_CLIENT_SECRET`
+- `SLACK_INSTALLATION_ENCRYPTION_KEY`
+- `N8N_API_BASE_URL`
+- `N8N_API_KEY`
+
+Consulta [`.env.example`](./.env.example) para el formato base.
 
 ## Workflows incluidos
 
-- `n8n/dependency-analysis.json`: workflow principal con tiers, síntesis AI, notificación a Slack y callback a la app
-- `n8n/package-research.json`: investigación profunda por paquete
+- [`n8n/dependency-analysis.json`](./n8n/dependency-analysis.json): workflow principal que recibe el payload inicial, prioriza paquetes, sintetiza el brief final, resuelve Slack y hace callback a la app.
+- [`n8n/package-research.json`](./n8n/package-research.json): subworkflow para investigación más profunda por paquete.
 
-## Contrato relevante hacia `n8n`
+## Documentación
 
-Payload inicial resumido:
-
-```json
-{
-	"analysisId": "analysis_...",
-	"projectName": "mi-proyecto",
-	"analysisUrl": "https://app.example.com/analysis/analysis_...",
-	"dependencyStats": {
-		"total": 32,
-		"outdated": 10,
-		"majors": 3,
-		"deprecated": 1
-	},
-	"candidates": [],
-	"notificationContext": {
-		"slack": {
-			"workspaceInstalled": true,
-			"enabled": true,
-			"channelId": "C123",
-			"channelName": "deps-alerts",
-			"notifyOnSuccess": true,
-			"notifyOnFailure": true,
-			"includeExecutiveBrief": true,
-			"includeTopPackages": true,
-			"topPackagesLimit": 3,
-			"requestedByUserId": "user_...",
-			"requestedByUserName": "Jane Doe"
-		}
-	}
-}
-```
-
-Callback resumido:
-
-```json
-{
-	"analysisId": "analysis_...",
-	"status": "completed",
-	"executiveSummaryMd": "...",
-	"upgradePlan": [],
-	"packageBriefs": [],
-	"slackDigestMd": "...",
-	"slackNotification": {
-		"enabled": true,
-		"attempted": true,
-		"status": "sent",
-		"channelId": "C123",
-		"channelName": "deps-alerts",
-		"notifiedAt": "2026-03-26T00:00:00.000Z"
-	},
-	"sources": []
-}
-```
-
-## Documentación técnica
-
-- [`ARCHITECTURE.md`](./ARCHITECTURE.md)
-- [`BD.md`](./BD.md)
-- [`DEPLOYMENT.md`](./DEPLOYMENT.md)
+- [`docs/architecture.md`](./docs/architecture.md)
+- [`docs/database.md`](./docs/database.md)
+- [`docs/deployment.md`](./docs/deployment.md)

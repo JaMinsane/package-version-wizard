@@ -5,7 +5,7 @@
 Build an impressive SvelteKit web app for a hackathon.
 
 Users upload a `package.json` file.  
-The server parses dependencies, checks for newer versions, calls an external n8n workflow for changelog summarization, and presents an AI-generated upgrade brief in a polished UI. But this is not just any app — it should feel like a premium, modern product that wows judges with its polish and utility. The architecture could change in the programming phase, but the core idea is to build a full-stack SvelteKit app with a strong focus on UX, clean code, and quality presentation.
+The server validates and parses dependencies, checks npm for newer versions, persists the analysis, calls external `n8n` workflows for package research and summary generation, and presents an AI-generated upgrade brief in a polished UI. The app should feel like a premium full-stack product with strong UX, clean code, and quality presentation.
 
 ## Default Stack
 
@@ -50,7 +50,7 @@ Prefer Bun for local development and package management:
 Do not default to npm, pnpm, or yarn.
 
 Exception:
-- when discussing or documenting production startup for `@sveltejs/adapter-node`, `node build` is valid and expected.
+- this repo runs the production server with Bun. Prefer `bun run start` when discussing or documenting runtime startup.
 
 ## SvelteKit Architecture Rules
 
@@ -134,6 +134,7 @@ Do not assume environment-variable behavior is identical across dev and producti
 This project is intended for deployment to a VPS using Dokploy.
 
 For production deployment, prefer `@sveltejs/adapter-node`.
+This repo uses `Bun.SQL` on the server, so production runtime guidance should assume Bun instead of `node build/index.js`.
 
 Do not recommend static-only deployment patterns for this app unless the requirements change, because the app depends on server-side upload handling, external HTTP calls, and AI orchestration.
 
@@ -165,7 +166,7 @@ Desired feel:
 - meaningful loading and empty states
 - impressive AI summary presentation
 
-The “wow” moments should be:
+The "wow" moments should be:
 1. smooth package.json upload
 2. useful dependency upgrade analysis
 3. polished AI-generated summary
