@@ -139,7 +139,7 @@
 									<span>/slack settings</span>
 								</a>
 
-								<form method="POST" action="/logout" use:enhance onsubmit={closeUserMenu}>
+								<form method="POST" action="/logout" use:enhance>
 									<button
 										type="submit"
 										class="user-menu-link user-menu-link--danger"
