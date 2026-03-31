@@ -25,6 +25,15 @@
 				Carga tu <code class="text-[var(--neon-green)]">package.json</code> para iniciar el análisis de
 				dependencias, obtener un brief AI y publicar el resultado final en Slack si lo tienes configurado.
 			</p>
+			<div class="mt-5 flex justify-center">
+				<a
+					href="/settings/integrations/slack"
+					class="inline-flex items-center gap-2 rounded-lg border border-[rgba(0,229,255,0.25)] bg-[rgba(0,229,255,0.06)] px-4 py-2 text-sm font-semibold text-[var(--neon-cyan)] transition-all hover:border-[rgba(0,229,255,0.4)] hover:bg-[rgba(0,229,255,0.1)] hover:shadow-[0_0_18px_rgba(0,229,255,0.18)]"
+				>
+					<span>$ open</span>
+					<span class="text-[var(--text-foreground)]">Configuración de Slack</span>
+				</a>
+			</div>
 		</div>
 
 		<UploadStudio environmentReady={data.environmentReady} formMessage={form?.message} />

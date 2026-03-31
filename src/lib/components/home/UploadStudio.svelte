@@ -164,12 +164,13 @@
 						</p>
 						<h3 class="mt-3 text-xl font-bold text-white">Slack opcional</h3>
 						<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-							El análisis no depende de Slack. Si quieres notificaciones finales, conéctalo desde
-							settings y luego ajusta el canal por proyecto en la vista del análisis.
+							El análisis no depende de Slack. Si quieres notificaciones finales, ábrelo desde tu
+							menú de usuario o usa este acceso directo y luego ajusta el canal por proyecto en la
+							vista del análisis.
 						</p>
 					</div>
 					<a href="/settings/integrations/slack" class="neon-badge neon-badge--green">
-						Configurar
+						Abrir configuración
 					</a>
 				</div>
 
