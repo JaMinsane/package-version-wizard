@@ -1,14 +1,10 @@
 # Package Version Wizard
 
-Package Version Wizard es una app full-stack construida con `SvelteKit + Bun + Tailwind + Postgres + n8n`.
+Package Version Wizard es un copiloto de upgrades para proyectos npm. El usuario sube su `package.json` y la app ejecuta un flujo full-stack: valida y parsea el archivo en el servidor, consulta el registro de npm para detectar dependencias outdated, major y deprecated, prioriza el riesgo y dispara un workflow en `n8n` para generar un brief AI accionable. Además, la plataforma incluye login y base de datos para proteger el flujo de subida y la configuración de integraciones, así como para persistir usuarios, proyectos, análisis y preferencias de notificación, de modo que cada resultado quede asociado a su usuario y pueda consultarse después.
 
-El flujo principal no cambió: el usuario sube un `package.json`, el servidor analiza dependencias, dispara `n8n` para la investigación/síntesis AI y persiste un brief ejecutivo con trazabilidad por paquete.
+El resultado no es solo una lista de versiones nuevas: cada análisis queda persistido con una URL compartible e incluye resumen ejecutivo, plan de upgrade por fases, detalle por paquete, fuentes trazables y una separación clara entre lo que realmente requiere cambio en el `package.json` y lo que ya está cubierto por el rango declarado. Además, de forma opcional, puede enviar el AI brief final a Slack con el link del análisis.
 
-La integración de Slack sí cambió de forma explícita:
-
-> Subes tu `package.json`, recibes el análisis completo y, si lo configuras, Slack recibe un brief ejecutivo corto con deep link al análisis.
-
-Slack ya no funciona como radar continuo ni como automatización recurrente. En esta base sólo existe como notificación final por canal.
+Stack principal: SSR web basada en `SvelteKit + Bun + TypeScript + Tailwind CSS` y backend con `Postgres + n8n + Slack API`.
 
 ## Estado actual del producto
 
@@ -37,72 +33,6 @@ Slack ya no funciona como radar continuo ni como automatización recurrente. En 
    - `slackDigestMd`
    - `slackNotification`
 7. La vista `/analysis/[id]` muestra el resultado y el estado del último envío a Slack.
-
-## Slack en esta migración
-
-- Un solo workspace por despliegue
-- OAuth de Slack manejado por la app
-- Token bot guardado cifrado en Postgres
-- La publicación la hace `n8n`, no el backend de SvelteKit
-- La app nunca envía tokens de Slack en el webhook inicial
-- La app sí envía configuración no sensible en `notificationContext.slack`
-- Se notifica tanto en `completed` como en `failed`
-- Si Slack falla, el análisis no pasa a `failed`; sólo queda auditado `slackNotification.status = failed`
-
-## Variables de entorno de la app
-
-Copia `.env.example` a `.env` y completa:
-
-```bash
-DATABASE_URL=
-APP_BASE_URL=
-
-N8N_ANALYSIS_WEBHOOK_URL=
-N8N_ANALYSIS_WEBHOOK_TOKEN=
-N8N_CALLBACK_SECRET=
-
-N8N_API_BASE_URL=
-N8N_API_KEY=
-
-SLACK_CLIENT_ID=
-SLACK_CLIENT_SECRET=
-SLACK_INSTALLATION_ENCRYPTION_KEY=
-```
-
-## Variables y secretos esperados en `n8n`
-
-Los workflows exportados esperan estos valores dentro de `n8n`:
-
-```bash
-APP_CALLBACK_URL=
-APP_CALLBACK_SECRET=
-GROQ_API_KEY=
-GITHUB_TOKEN=
-TAVILY_API_KEY=
-```
-
-Notas:
-
-- El webhook `dependency-analysis` usa `x-ingress-token` desde la app.
-- El callback de `n8n` hacia SvelteKit usa:
-  - `x-n8n-signature: APP_CALLBACK_SECRET`
-  - `x-idempotency-key: <valor-unico>`
-- El workflow `dependency-analysis` usa el nodo oficial de Slack con una credencial administrada que la app intenta sincronizar vía `N8N_API_BASE_URL` + `N8N_API_KEY`.
-
-## Desarrollo
-
-```bash
-bun install
-bun run db:migrate
-bun run dev
-```
-
-## Verificación local
-
-```bash
-bun run check
-bun run lint
-```
 
 ## Producción
 
