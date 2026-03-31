@@ -194,50 +194,46 @@
 							</select>
 						</label>
 
-						<div class="grid gap-3 sm:grid-cols-2">
-							<label class="data-cell cursor-pointer">
+						<div class="grid gap-2 sm:grid-cols-2">
+							<label class="slack-toggle-chip">
 								<input
 									name="notifyOnSuccess"
 									type="checkbox"
 									checked={data.slack.defaults.notifyOnSuccess}
-									class="mr-3 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
+									class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
 								/>
 								Al completar
 							</label>
-							<label class="data-cell cursor-pointer">
+							<label class="slack-toggle-chip">
 								<input
 									name="notifyOnFailure"
 									type="checkbox"
 									checked={data.slack.defaults.notifyOnFailure}
-									class="mr-3 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
+									class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
 								/>
 								Al fallar
 							</label>
-							<label class="data-cell cursor-pointer">
+							<label class="slack-toggle-chip">
 								<input
 									name="includeExecutiveBrief"
 									type="checkbox"
 									checked={data.slack.defaults.includeExecutiveBrief}
-									class="mr-3 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
+									class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
 								/>
 								Incluir brief
 							</label>
-							<label class="data-cell cursor-pointer">
+							<label class="slack-toggle-chip">
 								<input
 									name="includeTopPackages"
 									type="checkbox"
 									bind:checked={includeTopPackages}
-									class="mr-3 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
+									class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
 								/>
 								Incluir highlights
 							</label>
 						</div>
 
-						<SlackHighlightsLimitField
-							name="topPackagesLimit"
-							value={data.slack.defaults.topPackagesLimit}
-							disabled={!includeTopPackages}
-						/>
+						<SlackHighlightsLimitField name="topPackagesLimit" value={data.slack.defaults.topPackagesLimit} disabled={!includeTopPackages} />
 					</div>
 
 					<button type="submit" class="neon-button mt-6 w-full"> [ GUARDAR ] </button>

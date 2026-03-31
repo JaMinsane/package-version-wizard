@@ -219,50 +219,46 @@
 								</select>
 							</label>
 
-							<div class="grid gap-3 sm:grid-cols-2">
-								<label class="data-cell cursor-pointer">
+							<div class="grid gap-2 sm:grid-cols-2">
+								<label class="slack-toggle-chip">
 									<input
 										name="notifyOnSuccess"
 										type="checkbox"
 										checked={slack.projectSettings?.notifyOnSuccess ?? true}
-										class="mr-3 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
+										class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
 									/>
-									Notificar éxito
+									Al completar
 								</label>
-								<label class="data-cell cursor-pointer">
+								<label class="slack-toggle-chip">
 									<input
 										name="notifyOnFailure"
 										type="checkbox"
 										checked={slack.projectSettings?.notifyOnFailure ?? true}
-										class="mr-3 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
+										class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
 									/>
-									Notificar fallo
+									Al fallar
 								</label>
-								<label class="data-cell cursor-pointer">
+								<label class="slack-toggle-chip">
 									<input
 										name="includeExecutiveBrief"
 										type="checkbox"
 										checked={slack.projectSettings?.includeExecutiveBrief ?? true}
-										class="mr-3 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
+										class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
 									/>
 									Incluir brief
 								</label>
-								<label class="data-cell cursor-pointer">
+								<label class="slack-toggle-chip">
 									<input
 										name="includeTopPackages"
 										type="checkbox"
 										bind:checked={includeTopPackages}
-										class="mr-3 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
+										class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
 									/>
 									Incluir highlights
 								</label>
 							</div>
 
-							<SlackHighlightsLimitField
-								name="topPackagesLimit"
-								value={slack.projectSettings?.topPackagesLimit ?? 3}
-								disabled={!includeTopPackages}
-							/>
+							<SlackHighlightsLimitField name="topPackagesLimit" value={slack.projectSettings?.topPackagesLimit ?? 3} disabled={!includeTopPackages} />
 						</div>
 					{/if}
 
