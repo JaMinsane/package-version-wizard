@@ -109,7 +109,12 @@
 						Slack es opcional. Si lo configuras antes, la notificación se envía al final del
 						análisis.
 					</p>
-					<a href="/settings/integrations/slack" class="upload-note-link"> Configurar Slack </a>
+					<a
+						href="/settings/integrations/slack"
+						class="neon-badge neon-badge--muted text-xs transition-all hover:border-[rgba(0,229,255,0.4)] hover:text-[var(--neon-cyan)]"
+					>
+					Configurar Slack →
+				</a>
 				</div>
 			</div>
 		</div>
@@ -197,22 +202,13 @@
 		<div class="mt-6 flex items-center gap-3">
 			<button
 				type="button"
-				class="neon-badge neon-badge--green cursor-pointer text-xs transition-all hover:shadow-[0_0_16px_rgba(15,255,106,0.3)]"
+				class="neon-badge neon-badge--muted text-xs transition-all hover:border-[rgba(0,229,255,0.4)] hover:text-[var(--neon-cyan)]"
 				aria-expanded={showReadiness}
 				aria-controls="environment-panel"
 				onclick={toggleReadiness}
 			>
-				<span
-					class="inline-block h-1.5 w-1.5 rounded-full bg-[var(--neon-green)] shadow-[0_0_6px_var(--neon-green)]"
-				></span>
 				Estado del stack
 			</button>
-			<a
-				href="/settings/integrations/slack"
-				class="neon-badge neon-badge--muted text-xs transition-all hover:border-[rgba(0,229,255,0.4)] hover:text-[var(--neon-cyan)]"
-			>
-				Configurar Slack →
-			</a>
 		</div>
 
 		{#if showReadiness}
