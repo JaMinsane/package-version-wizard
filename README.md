@@ -112,11 +112,6 @@ La configuración editable de Slack quedó reducida a lo mínimo: canal, `Al com
 
 Consulta [`.env.example`](./.env.example) para el formato base.
 
-## Workflows incluidos
-
-- [`n8n/dependency-analysis.json`](./n8n/dependency-analysis.json): workflow principal que recibe el payload inicial, prioriza paquetes, sintetiza el brief final, resuelve Slack y hace callback a la app.
-- [`n8n/package-research.json`](./n8n/package-research.json): subworkflow para investigación más profunda por paquete.
-
 ## Documentación
 
 - [`docs/architecture.md`](./docs/architecture.md)
