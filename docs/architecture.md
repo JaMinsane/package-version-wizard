@@ -88,9 +88,7 @@ La app envía un payload `N8nAnalysisRequest` con esta forma:
 			"diffType": "major",
 			"deprecated": false,
 			"riskScore": 80,
-			"sourceUrls": [
-				"https://www.npmjs.com/package/vite"
-			],
+			"sourceUrls": ["https://www.npmjs.com/package/vite"],
 			"resolution": {
 				"declaredSpec": "^6.0.0",
 				"specKind": "semver",
@@ -106,14 +104,10 @@ La app envía un payload `N8nAnalysisRequest` con esta forma:
 	"notificationContext": {
 		"slack": {
 			"workspaceInstalled": true,
-			"enabled": true,
 			"channelId": "C123",
 			"channelName": "deps-alerts",
 			"notifyOnSuccess": true,
 			"notifyOnFailure": true,
-			"includeExecutiveBrief": true,
-			"includeTopPackages": true,
-			"topPackagesLimit": 3,
 			"requestedByUserId": "user_123",
 			"requestedByUserName": "Jane Doe"
 		}
@@ -147,7 +141,6 @@ Notas relevantes:
 	"packageBriefs": [],
 	"slackDigestMd": "Digest corto para Slack",
 	"slackNotification": {
-		"enabled": true,
 		"attempted": true,
 		"status": "sent",
 		"channelId": "C123",
@@ -189,13 +182,15 @@ El contexto efectivo de Slack se calcula en servidor combinando:
 2. defaults del usuario
 3. override del proyecto
 
-Si falta workspace, canal o sincronización con `n8n`, el análisis sigue corriendo y el contexto se manda con `enabled: false` o con `reason` para que el workflow registre el resultado operativo.
+Si falta workspace, canal o sincronización con `n8n`, el análisis sigue corriendo y el contexto se manda con `reason` para que el workflow registre el resultado operativo. Si `notifyOnSuccess` y `notifyOnFailure` están en `false`, la notificación queda en pausa sin borrar el canal guardado.
 
 ### Configuración expuesta
 
 - Defaults por usuario en `/settings/integrations/slack`
 - Override por proyecto desde la sidebar de `/analysis/[id]`
 - Selector de canales visible solo para canales accesibles por el bot
+- Configuración mínima: `channel`, `notifyOnSuccess`, `notifyOnFailure`
+- El mensaje final lo decide el workflow y siempre incluye proyecto, estado, métricas, `slackDigestMd` y link al análisis
 
 ## Vista de análisis
 

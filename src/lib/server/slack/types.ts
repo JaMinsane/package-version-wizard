@@ -8,14 +8,10 @@ export interface SlackChannelOption {
 }
 
 export interface SlackPreferenceSettings {
-	enabled: boolean;
 	channelId?: string;
 	channelName?: string;
 	notifyOnSuccess: boolean;
 	notifyOnFailure: boolean;
-	includeExecutiveBrief: boolean;
-	includeTopPackages: boolean;
-	topPackagesLimit: number;
 }
 
 export interface ProjectSlackNotificationSettings extends SlackPreferenceSettings {
@@ -48,7 +44,6 @@ export interface SlackNotificationContext extends SlackPreferenceSettings {
 }
 
 export interface SlackNotificationResult {
-	enabled: boolean;
 	attempted: boolean;
 	status: SlackNotificationDeliveryStatus;
 	channelId?: string;

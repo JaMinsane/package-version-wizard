@@ -102,7 +102,6 @@ Snapshot completo de una corrida.
 
 ```json
 {
-	"enabled": true,
 	"attempted": true,
 	"status": "sent",
 	"channelId": "C123",
@@ -182,14 +181,10 @@ El token del bot se guarda cifrado y la app intenta sincronizarlo como credencia
 Defaults de Slack por usuario.
 
 - `user_id` PK/FK a `users.id`
-- `enabled`
 - `channel_id`
 - `channel_name`
 - `notify_on_success`
 - `notify_on_failure`
-- `include_brief`
-- `include_top_packages`
-- `top_packages_limit`
 - `created_at`
 - `updated_at`
 
@@ -198,15 +193,11 @@ Defaults de Slack por usuario.
 Overrides de Slack por proyecto.
 
 - `project_id` PK/FK a `projects.id`
-- `enabled`
 - `inherit_user_defaults`
 - `channel_id`
 - `channel_name`
 - `notify_on_success`
 - `notify_on_failure`
-- `include_brief`
-- `include_top_packages`
-- `top_packages_limit`
 - `created_at`
 - `updated_at`
 

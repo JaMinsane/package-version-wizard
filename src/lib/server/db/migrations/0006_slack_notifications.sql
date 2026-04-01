@@ -36,31 +36,21 @@ CREATE UNIQUE INDEX IF NOT EXISTS slack_workspaces_single_active_idx
 
 CREATE TABLE IF NOT EXISTS user_slack_preferences (
 	user_id text PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-	enabled boolean NOT NULL DEFAULT false,
 	channel_id text,
 	channel_name text,
-	notify_on_success boolean NOT NULL DEFAULT true,
-	notify_on_failure boolean NOT NULL DEFAULT true,
-	include_brief boolean NOT NULL DEFAULT true,
-	include_top_packages boolean NOT NULL DEFAULT true,
-	top_packages_limit integer NOT NULL DEFAULT 3
-		CHECK (top_packages_limit BETWEEN 1 AND 10),
+	notify_on_success boolean NOT NULL DEFAULT false,
+	notify_on_failure boolean NOT NULL DEFAULT false,
 	created_at timestamptz NOT NULL DEFAULT now(),
 	updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS project_notification_settings (
 	project_id text PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
-	enabled boolean NOT NULL DEFAULT false,
 	inherit_user_defaults boolean NOT NULL DEFAULT true,
 	channel_id text,
 	channel_name text,
-	notify_on_success boolean NOT NULL DEFAULT true,
-	notify_on_failure boolean NOT NULL DEFAULT true,
-	include_brief boolean NOT NULL DEFAULT true,
-	include_top_packages boolean NOT NULL DEFAULT true,
-	top_packages_limit integer NOT NULL DEFAULT 3
-		CHECK (top_packages_limit BETWEEN 1 AND 10),
+	notify_on_success boolean NOT NULL DEFAULT false,
+	notify_on_failure boolean NOT NULL DEFAULT false,
 	created_at timestamptz NOT NULL DEFAULT now(),
 	updated_at timestamptz NOT NULL DEFAULT now()
 );

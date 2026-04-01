@@ -1,5 +1,4 @@
 <script lang="ts">
-	import SlackHighlightsLimitField from '$lib/components/slack/SlackHighlightsLimitField.svelte';
 	import type { AnalysisSnapshot } from '$lib/server/analysis/types';
 	import type { AnalysisSlackPanelData } from '$lib/server/slack/types';
 	import {
@@ -22,13 +21,21 @@
 		$props();
 
 	let inheritUserDefaults = $state(true);
-	let projectEnabled = $state(false);
-	let includeTopPackages = $state(true);
+	let projectChannelId = $state('');
+	let projectNotifyOnSuccess = $state(false);
+	let projectNotifyOnFailure = $state(false);
+	let projectNotificationsPaused = $derived(!projectNotifyOnSuccess && !projectNotifyOnFailure);
 
 	$effect(() => {
 		inheritUserDefaults = slack.projectSettings?.inheritUserDefaults ?? true;
-		projectEnabled = slack.projectSettings?.enabled ?? false;
-		includeTopPackages = slack.projectSettings?.includeTopPackages ?? true;
+		const baseSettings =
+			slack.projectSettings && !slack.projectSettings.inheritUserDefaults
+				? slack.projectSettings
+				: (slack.effectiveSettings ?? slack.userDefaults);
+
+		projectChannelId = baseSettings?.channelId ?? '';
+		projectNotifyOnSuccess = baseSettings?.notifyOnSuccess ?? false;
+		projectNotifyOnFailure = baseSettings?.notifyOnFailure ?? false;
 	});
 </script>
 
@@ -102,7 +109,9 @@
 						</p>
 					</div>
 					<div>
-						<p class="text-xs tracking-widest text-[var(--text-dim)] uppercase">Clave de idempotencia</p>
+						<p class="text-xs tracking-widest text-[var(--text-dim)] uppercase">
+							Clave de idempotencia
+						</p>
 						<p class="mt-2 text-xs leading-6 break-all text-[var(--text-muted-relaxed-relaxed)]">
 							{analysis.lastIdempotencyKey ?? 'Sin callback aún'}
 						</p>
@@ -143,7 +152,7 @@
 			</div>
 
 			<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed-relaxed)]">
-				Al completarse, el brief y el link se publican en el canal configurado.
+				El workflow arma el mensaje final con estado, métricas, digest corto y link al análisis.
 			</p>
 
 			<div class="mt-6 grid gap-3">
@@ -191,28 +200,43 @@
 							</a>.
 						</div>
 					{:else}
-						<label class="neon-badge neon-badge--green cursor-pointer">
-							<input
-								name="enabled"
-								type="checkbox"
-								bind:checked={projectEnabled}
-								class="rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
-							/>
-							Activar para este proyecto
-						</label>
+						<div
+							class="rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.48)] p-4"
+						>
+							<div class="flex flex-wrap items-center gap-3">
+								<p class="text-sm font-bold text-white">
+									{projectNotificationsPaused
+										? 'Notificaciones de este proyecto en pausa'
+										: 'Notificaciones de este proyecto activas'}
+								</p>
+								<span
+									class={projectNotificationsPaused
+										? 'neon-badge neon-badge--muted'
+										: 'neon-badge neon-badge--green'}
+								>
+									{projectNotificationsPaused ? 'en pausa' : 'activo'}
+								</span>
+							</div>
+							<p class="mt-2 text-sm leading-7 text-[var(--text-muted-relaxed-relaxed)]">
+								Si apagas ambos eventos, este proyecto deja de publicar en Slack sin perder el canal
+								guardado.
+							</p>
+						</div>
 
 						<div class="grid gap-4">
 							<label class="block">
 								<span class="text-xs font-bold tracking-widest text-[var(--text-dim)] uppercase">
 									Canal del proyecto
 								</span>
-								<select name="channelId" class="mt-2 w-full" disabled={!slack.channels.length}>
+								<select
+									name="channelId"
+									class="mt-2 w-full"
+									bind:value={projectChannelId}
+									disabled={!slack.channels.length}
+								>
 									<option value="">Selecciona un canal</option>
 									{#each slack.channels as channel}
-										<option
-											value={channel.id}
-											selected={slack.projectSettings?.channelId === channel.id}
-										>
+										<option value={channel.id}>
 											{channel.isPrivate ? '[privado] ' : '#'}{channel.name}
 										</option>
 									{/each}
@@ -224,7 +248,7 @@
 									<input
 										name="notifyOnSuccess"
 										type="checkbox"
-										checked={slack.projectSettings?.notifyOnSuccess ?? true}
+										bind:checked={projectNotifyOnSuccess}
 										class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
 									/>
 									Al completar
@@ -233,32 +257,15 @@
 									<input
 										name="notifyOnFailure"
 										type="checkbox"
-										checked={slack.projectSettings?.notifyOnFailure ?? true}
+										bind:checked={projectNotifyOnFailure}
 										class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
 									/>
 									Al fallar
 								</label>
-								<label class="slack-toggle-chip">
-									<input
-										name="includeExecutiveBrief"
-										type="checkbox"
-										checked={slack.projectSettings?.includeExecutiveBrief ?? true}
-										class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
-									/>
-									Incluir brief
-								</label>
-								<label class="slack-toggle-chip">
-									<input
-										name="includeTopPackages"
-										type="checkbox"
-										bind:checked={includeTopPackages}
-										class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
-									/>
-									Incluir highlights
-								</label>
 							</div>
-
-							<SlackHighlightsLimitField name="topPackagesLimit" value={slack.projectSettings?.topPackagesLimit ?? 3} disabled={!includeTopPackages} />
+							<p class="text-sm leading-7 text-[var(--text-muted-relaxed-relaxed)]">
+								Si activas alguno de estos eventos, debes elegir un canal para este proyecto.
+							</p>
 						</div>
 					{/if}
 
@@ -277,7 +284,7 @@
 
 				{#if !slack.workspace}
 					<div class="alert-box alert-box--amber mt-4">
-					Conecta Slack en <a
+						Conecta Slack en <a
 							href="/settings/integrations/slack"
 							class="underline decoration-dotted">settings</a
 						>

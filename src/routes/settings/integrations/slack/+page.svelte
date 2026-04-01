@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import slackLogo from '$lib/assets/slack-logo.svg';
-	import SlackHighlightsLimitField from '$lib/components/slack/SlackHighlightsLimitField.svelte';
 
 	import type { ActionData, PageData } from './$types';
 
@@ -13,12 +12,15 @@
 		form: ActionData;
 	} = $props();
 
-	let enabled = $state(false);
-	let includeTopPackages = $state(true);
+	let selectedChannelId = $state('');
+	let notifyOnSuccess = $state(false);
+	let notifyOnFailure = $state(false);
+	let notificationsPaused = $derived(!notifyOnSuccess && !notifyOnFailure);
 
 	$effect(() => {
-		enabled = data.slack.defaults.enabled;
-		includeTopPackages = data.slack.defaults.includeTopPackages;
+		selectedChannelId = data.slack.defaults.channelId ?? '';
+		notifyOnSuccess = data.slack.defaults.notifyOnSuccess;
+		notifyOnFailure = data.slack.defaults.notifyOnFailure;
 	});
 </script>
 
@@ -227,34 +229,27 @@
 					</div>
 
 					<div class="settings-mode-card mt-6">
-						<div class="min-w-0">
+						<div class="min-w-0 space-y-3">
 							<p class="text-xs font-bold tracking-widest text-[var(--text-dim)] uppercase">
-								Estado por defecto
+								Estado actual
 							</p>
 							<div class="mt-3 flex flex-wrap items-center gap-3">
 								<p class="text-base font-bold text-white">
-									{enabled ? 'Envío automático activo' : 'Envío automático en pausa'}
+									{notificationsPaused ? 'Notificaciones en pausa' : 'Notificaciones activas'}
 								</p>
 								<span
-									class={enabled ? 'neon-badge neon-badge--green' : 'neon-badge neon-badge--muted'}
+									class={notificationsPaused
+										? 'neon-badge neon-badge--muted'
+										: 'neon-badge neon-badge--green'}
 								>
-									{enabled ? 'activo' : 'en pausa'}
+									{notificationsPaused ? 'en pausa' : 'activo'}
 								</span>
 							</div>
 							<p class="mt-2 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-								{enabled
-									? 'Los nuevos análisis intentarán publicar en Slack con estas reglas, salvo override por proyecto.'
-									: 'El envío queda pausado por defecto. Puedes dejar canal y contenido preparados y reactivarlos luego sin perder esta configuración.'}
+								Si activas al menos un evento, los nuevos análisis publicarán en el canal elegido.
+								Si apagas ambos, Slack queda en pausa sin borrar el canal.
 							</p>
 						</div>
-
-						<label class:slack-state-toggle--enabled={enabled} class="slack-state-toggle">
-							<input name="enabled" type="checkbox" bind:checked={enabled} class="sr-only" />
-							<span class="slack-state-toggle__track" aria-hidden="true">
-								<span class="slack-state-toggle__thumb"></span>
-							</span>
-							<span class="slack-state-toggle__label">{enabled ? 'Activo' : 'En pausa'}</span>
-						</label>
 					</div>
 
 					<div class="mt-6 grid gap-5">
@@ -262,13 +257,15 @@
 							<span class="text-xs font-bold tracking-widest text-[var(--text-dim)] uppercase">
 								Canal de destino
 							</span>
-							<select name="channelId" class="mt-2 w-full" disabled={!data.slack.channels.length}>
+							<select
+								name="channelId"
+								class="mt-2 w-full"
+								bind:value={selectedChannelId}
+								disabled={!data.slack.channels.length}
+							>
 								<option value="">Selecciona un canal</option>
 								{#each data.slack.channels as channel}
-									<option
-										value={channel.id}
-										selected={data.slack.defaults.channelId === channel.id}
-									>
+									<option value={channel.id}>
 										{channel.isPrivate ? '[privado] ' : '#'}{channel.name}
 									</option>
 								{/each}
@@ -284,7 +281,7 @@
 									<input
 										name="notifyOnSuccess"
 										type="checkbox"
-										checked={data.slack.defaults.notifyOnSuccess}
+										bind:checked={notifyOnSuccess}
 										class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
 									/>
 									Al completar
@@ -293,53 +290,19 @@
 									<input
 										name="notifyOnFailure"
 										type="checkbox"
-										checked={data.slack.defaults.notifyOnFailure}
+										bind:checked={notifyOnFailure}
 										class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
 									/>
 									Al fallar
 								</label>
 							</div>
-						</div>
-
-						<div>
-							<p class="text-xs font-bold tracking-widest text-[var(--text-dim)] uppercase">
-								Contenido
+							<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed)]">
+								El mensaje final siempre incluye estado, métricas, digest corto y link al análisis.
 							</p>
-							<div class="mt-2 grid gap-2 sm:grid-cols-2">
-								<label class="slack-toggle-chip">
-									<input
-										name="includeExecutiveBrief"
-										type="checkbox"
-										checked={data.slack.defaults.includeExecutiveBrief}
-										class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
-									/>
-									Incluir brief
-								</label>
-								<label class="slack-toggle-chip">
-									<input
-										name="includeTopPackages"
-										type="checkbox"
-										bind:checked={includeTopPackages}
-										class="m-0 rounded border-[var(--border-green)] bg-transparent text-[var(--neon-green)] focus:ring-[var(--neon-green)]"
-									/>
-									Incluir highlights
-								</label>
-							</div>
 						</div>
-
-						<SlackHighlightsLimitField
-							name="topPackagesLimit"
-							value={data.slack.defaults.topPackagesLimit}
-							disabled={!includeTopPackages}
-							description={includeTopPackages
-								? 'Cuántos paquetes destacados se incluyen en el mensaje.'
-								: 'Activa highlights para definir este máximo.'}
-						/>
 					</div>
 
-					<button type="submit" class="neon-button mt-6 w-full">
-						{enabled ? '[ GUARDAR DEFAULTS ]' : '[ GUARDAR EN PAUSA ]'}
-					</button>
+					<button type="submit" class="neon-button mt-6 w-full"> [ GUARDAR CONFIGURACIÓN ] </button>
 				</div>
 			</section>
 
@@ -357,9 +320,9 @@
 					<p class="section-label">Notas</p>
 					<div class="mt-4 grid gap-3">
 						<div class="data-cell">
-							<p class="text-sm font-bold text-white">Un workspace por despliegue</p>
+							<p class="text-sm font-bold text-white">Mensaje fijo</p>
 							<p class="mt-1 text-xs text-[var(--text-muted-relaxed)]">
-								n8n publica con su nodo oficial de Slack.
+								El workflow decide el formato y publica estado, métricas, digest y link.
 							</p>
 						</div>
 						<div class="data-cell">
@@ -451,74 +414,13 @@
 
 	.settings-mode-card {
 		display: flex;
+		flex-direction: column;
 		align-items: flex-start;
-		justify-content: space-between;
 		gap: 1rem;
 		padding: 1rem 1.125rem;
 		border-radius: 14px;
 		border: 1px solid rgba(15, 255, 106, 0.18);
 		background: rgba(10, 10, 15, 0.48);
-	}
-
-	.slack-state-toggle {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.7rem;
-		padding: 0.55rem 0.85rem;
-		border-radius: 999px;
-		border: 1px solid rgba(15, 255, 106, 0.18);
-		background: rgba(10, 10, 15, 0.72);
-		cursor: pointer;
-		user-select: none;
-		transition:
-			border-color 0.2s,
-			background 0.2s,
-			box-shadow 0.2s;
-	}
-
-	.slack-state-toggle--enabled {
-		border-color: rgba(15, 255, 106, 0.38);
-		background: rgba(15, 255, 106, 0.08);
-		box-shadow: 0 0 24px rgba(15, 255, 106, 0.08);
-	}
-
-	.slack-state-toggle__track {
-		position: relative;
-		display: inline-flex;
-		height: 24px;
-		width: 44px;
-		align-items: center;
-		border-radius: 999px;
-		border: 1px solid rgba(15, 255, 106, 0.2);
-		background: rgba(255, 255, 255, 0.08);
-	}
-
-	.slack-state-toggle__thumb {
-		position: absolute;
-		left: 2px;
-		height: 18px;
-		width: 18px;
-		border-radius: 999px;
-		background: rgba(255, 255, 255, 0.88);
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-		transition:
-			transform 0.2s ease,
-			background 0.2s ease,
-			box-shadow 0.2s ease;
-	}
-
-	.slack-state-toggle--enabled .slack-state-toggle__thumb {
-		transform: translateX(19px);
-		background: var(--neon-green);
-		box-shadow: 0 0 14px rgba(15, 255, 106, 0.34);
-	}
-
-	.slack-state-toggle__label {
-		font-size: 0.78rem;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: #d7ffea;
 	}
 
 	.slack-disconnect-button {
@@ -562,8 +464,7 @@
 			align-items: stretch;
 		}
 
-		.slack-inline-link,
-		.slack-state-toggle {
+		.slack-inline-link {
 			justify-content: center;
 		}
 	}

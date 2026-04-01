@@ -402,7 +402,6 @@ function asSlackNotification(value: unknown): SlackNotificationResult | undefine
 	const record = asRecord(value, 'slackNotification');
 
 	return {
-		enabled: asBoolean(record.enabled, 'slackNotification.enabled'),
 		attempted: asBoolean(record.attempted, 'slackNotification.attempted'),
 		status: asSlackNotificationStatus(record.status),
 		channelId: asOptionalStringField(record.channelId, 'slackNotification.channelId'),

@@ -177,28 +177,22 @@ export async function getAnalysisSlackPanelData(input: {
 
 export async function saveUserSlackPreferencesFromForm(userId: string, formData: FormData) {
 	const parsed = slackPreferenceSchema.parse({
-		enabled: formDataHasCheckedValue(formData, 'enabled'),
 		channelId: getOptionalTrimmedString(formData, 'channelId'),
 		notifyOnSuccess: formDataHasCheckedValue(formData, 'notifyOnSuccess'),
-		notifyOnFailure: formDataHasCheckedValue(formData, 'notifyOnFailure'),
-		includeExecutiveBrief: formDataHasCheckedValue(formData, 'includeExecutiveBrief'),
-		includeTopPackages: formDataHasCheckedValue(formData, 'includeTopPackages'),
-		topPackagesLimit: Number(
-			formData.get('topPackagesLimit') ?? DEFAULT_SLACK_PREFERENCES.topPackagesLimit
-		)
+		notifyOnFailure: formDataHasCheckedValue(formData, 'notifyOnFailure')
 	});
 	const channels = await getSlackChannelsForWorkspace();
-	const channel = validateChannelSelection(parsed.enabled, parsed.channelId, channels);
+	const channel = validateChannelSelection(
+		parsed.notifyOnSuccess || parsed.notifyOnFailure,
+		parsed.channelId,
+		channels
+	);
 
 	await upsertUserSlackPreferences(userId, {
-		enabled: parsed.enabled,
 		channelId: channel?.id,
 		channelName: channel?.name,
 		notifyOnSuccess: parsed.notifyOnSuccess,
-		notifyOnFailure: parsed.notifyOnFailure,
-		includeExecutiveBrief: parsed.includeExecutiveBrief,
-		includeTopPackages: parsed.includeTopPackages,
-		topPackagesLimit: parsed.topPackagesLimit
+		notifyOnFailure: parsed.notifyOnFailure
 	});
 }
 
@@ -207,32 +201,26 @@ export async function saveProjectSlackSettingsFromForm(input: {
 	formData: FormData;
 }) {
 	const parsed = projectSlackPreferenceSchema.parse({
-		enabled: formDataHasCheckedValue(input.formData, 'enabled'),
 		inheritUserDefaults: formDataHasCheckedValue(input.formData, 'inheritUserDefaults'),
 		channelId: getOptionalTrimmedString(input.formData, 'channelId'),
 		notifyOnSuccess: formDataHasCheckedValue(input.formData, 'notifyOnSuccess'),
-		notifyOnFailure: formDataHasCheckedValue(input.formData, 'notifyOnFailure'),
-		includeExecutiveBrief: formDataHasCheckedValue(input.formData, 'includeExecutiveBrief'),
-		includeTopPackages: formDataHasCheckedValue(input.formData, 'includeTopPackages'),
-		topPackagesLimit: Number(
-			input.formData.get('topPackagesLimit') ?? DEFAULT_SLACK_PREFERENCES.topPackagesLimit
-		)
+		notifyOnFailure: formDataHasCheckedValue(input.formData, 'notifyOnFailure')
 	});
 	const channels = await getSlackChannelsForWorkspace();
 	const channel = parsed.inheritUserDefaults
 		? undefined
-		: validateChannelSelection(parsed.enabled, parsed.channelId, channels);
+		: validateChannelSelection(
+				parsed.notifyOnSuccess || parsed.notifyOnFailure,
+				parsed.channelId,
+				channels
+			);
 
 	await upsertProjectSlackSettings(input.projectId, {
-		enabled: parsed.enabled,
 		inheritUserDefaults: parsed.inheritUserDefaults,
 		channelId: channel?.id,
 		channelName: channel?.name,
 		notifyOnSuccess: parsed.notifyOnSuccess,
-		notifyOnFailure: parsed.notifyOnFailure,
-		includeExecutiveBrief: parsed.includeExecutiveBrief,
-		includeTopPackages: parsed.includeTopPackages,
-		topPackagesLimit: parsed.topPackagesLimit
+		notifyOnFailure: parsed.notifyOnFailure
 	});
 }
 
@@ -269,12 +257,12 @@ export async function resolveSlackNotificationContext(input: {
 	]);
 	const effective = resolveEffectiveSlackSettings(userDefaults, projectSettings);
 
-	if (!effective.enabled) {
+	if (isSlackNotificationPaused(effective)) {
 		return {
 			workspaceInstalled: true,
 			requestedByUserId: input.requestedByUserId,
 			requestedByUserName: input.requestedByUserName,
-			reason: 'notifications_disabled',
+			reason: 'notifications_paused',
 			...effective
 		};
 	}
@@ -285,8 +273,7 @@ export async function resolveSlackNotificationContext(input: {
 			requestedByUserId: input.requestedByUserId,
 			requestedByUserName: input.requestedByUserName,
 			reason: 'missing_channel',
-			...effective,
-			enabled: false
+			...effective
 		};
 	}
 
@@ -307,14 +294,10 @@ export function resolveEffectiveSlackSettings(
 	}
 
 	return {
-		enabled: projectSettings.enabled,
 		channelId: projectSettings.channelId,
 		channelName: projectSettings.channelName,
 		notifyOnSuccess: projectSettings.notifyOnSuccess,
-		notifyOnFailure: projectSettings.notifyOnFailure,
-		includeExecutiveBrief: projectSettings.includeExecutiveBrief,
-		includeTopPackages: projectSettings.includeTopPackages,
-		topPackagesLimit: projectSettings.topPackagesLimit
+		notifyOnFailure: projectSettings.notifyOnFailure
 	};
 }
 
@@ -337,16 +320,16 @@ async function getSlackChannelsForWorkspaceSafe() {
 }
 
 function validateChannelSelection(
-	enabled: boolean,
+	shouldNotify: boolean,
 	channelId: string | undefined,
 	channels: SlackChannelOption[]
 ) {
-	if (!enabled) {
+	if (!shouldNotify) {
 		return channelId ? channels.find((channel) => channel.id === channelId) : undefined;
 	}
 
 	if (!channelId) {
-		throw new Error('Selecciona un canal de Slack antes de activar las notificaciones.');
+		throw new Error('Selecciona un canal de Slack para poder enviar notificaciones.');
 	}
 
 	const channel = channels.find((entry) => entry.id === channelId);
@@ -358,4 +341,8 @@ function validateChannelSelection(
 	}
 
 	return channel;
+}
+
+function isSlackNotificationPaused(settings: SlackPreferenceSettings) {
+	return !settings.notifyOnSuccess && !settings.notifyOnFailure;
 }

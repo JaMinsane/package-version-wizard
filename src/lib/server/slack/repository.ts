@@ -25,14 +25,10 @@ interface SlackWorkspaceRow {
 }
 
 interface SlackPreferenceRow {
-	enabled: boolean;
 	channel_id: string | null;
 	channel_name: string | null;
 	notify_on_success: boolean;
 	notify_on_failure: boolean;
-	include_brief: boolean;
-	include_top_packages: boolean;
-	top_packages_limit: number;
 }
 
 interface ProjectPreferenceRow extends SlackPreferenceRow {
@@ -46,12 +42,8 @@ interface SlackWorkspaceSecretRow {
 }
 
 export const DEFAULT_SLACK_PREFERENCES: SlackPreferenceSettings = {
-	enabled: false,
-	notifyOnSuccess: true,
-	notifyOnFailure: true,
-	includeExecutiveBrief: true,
-	includeTopPackages: true,
-	topPackagesLimit: 3
+	notifyOnSuccess: false,
+	notifyOnFailure: false
 };
 
 export async function getActiveSlackWorkspace() {
@@ -210,14 +202,10 @@ export async function getUserSlackPreferences(userId: string): Promise<SlackPref
 	const db = getDb();
 	const rows = await db<SlackPreferenceRow[]>`
 		SELECT
-			enabled,
 			channel_id,
 			channel_name,
 			notify_on_success,
-			notify_on_failure,
-			include_brief,
-			include_top_packages,
-			top_packages_limit
+			notify_on_failure
 		FROM user_slack_preferences
 		WHERE user_id = ${userId}
 		LIMIT 1
@@ -232,36 +220,24 @@ export async function upsertUserSlackPreferences(userId: string, input: SlackPre
 	await db`
 		INSERT INTO user_slack_preferences (
 			user_id,
-			enabled,
 			channel_id,
 			channel_name,
 			notify_on_success,
-			notify_on_failure,
-			include_brief,
-			include_top_packages,
-			top_packages_limit
+			notify_on_failure
 		)
 		VALUES (
 			${userId},
-			${input.enabled},
 			${input.channelId ?? null},
 			${input.channelName ?? null},
 			${input.notifyOnSuccess},
-			${input.notifyOnFailure},
-			${input.includeExecutiveBrief},
-			${input.includeTopPackages},
-			${input.topPackagesLimit}
+			${input.notifyOnFailure}
 		)
 		ON CONFLICT (user_id)
 		DO UPDATE SET
-			enabled = EXCLUDED.enabled,
 			channel_id = EXCLUDED.channel_id,
 			channel_name = EXCLUDED.channel_name,
 			notify_on_success = EXCLUDED.notify_on_success,
 			notify_on_failure = EXCLUDED.notify_on_failure,
-			include_brief = EXCLUDED.include_brief,
-			include_top_packages = EXCLUDED.include_top_packages,
-			top_packages_limit = EXCLUDED.top_packages_limit,
 			updated_at = now()
 	`;
 }
@@ -271,15 +247,11 @@ export async function getProjectSlackSettings(projectId: string) {
 	const rows = await db<ProjectPreferenceRow[]>`
 		SELECT
 			project_id,
-			enabled,
 			inherit_user_defaults,
 			channel_id,
 			channel_name,
 			notify_on_success,
-			notify_on_failure,
-			include_brief,
-			include_top_packages,
-			top_packages_limit
+			notify_on_failure
 		FROM project_notification_settings
 		WHERE project_id = ${projectId}
 		LIMIT 1
@@ -297,39 +269,27 @@ export async function upsertProjectSlackSettings(
 	await db`
 		INSERT INTO project_notification_settings (
 			project_id,
-			enabled,
 			inherit_user_defaults,
 			channel_id,
 			channel_name,
 			notify_on_success,
-			notify_on_failure,
-			include_brief,
-			include_top_packages,
-			top_packages_limit
+			notify_on_failure
 		)
 		VALUES (
 			${projectId},
-			${input.enabled},
 			${input.inheritUserDefaults},
 			${input.channelId ?? null},
 			${input.channelName ?? null},
 			${input.notifyOnSuccess},
-			${input.notifyOnFailure},
-			${input.includeExecutiveBrief},
-			${input.includeTopPackages},
-			${input.topPackagesLimit}
+			${input.notifyOnFailure}
 		)
 		ON CONFLICT (project_id)
 		DO UPDATE SET
-			enabled = EXCLUDED.enabled,
 			inherit_user_defaults = EXCLUDED.inherit_user_defaults,
 			channel_id = EXCLUDED.channel_id,
 			channel_name = EXCLUDED.channel_name,
 			notify_on_success = EXCLUDED.notify_on_success,
 			notify_on_failure = EXCLUDED.notify_on_failure,
-			include_brief = EXCLUDED.include_brief,
-			include_top_packages = EXCLUDED.include_top_packages,
-			top_packages_limit = EXCLUDED.top_packages_limit,
 			updated_at = now()
 	`;
 }
@@ -355,14 +315,10 @@ function mapWorkspaceRow(row: SlackWorkspaceRow): SlackWorkspaceSnapshot {
 
 function mapPreferenceRow(row: SlackPreferenceRow): SlackPreferenceSettings {
 	return {
-		enabled: row.enabled,
 		channelId: row.channel_id ?? undefined,
 		channelName: row.channel_name ?? undefined,
 		notifyOnSuccess: row.notify_on_success,
-		notifyOnFailure: row.notify_on_failure,
-		includeExecutiveBrief: row.include_brief,
-		includeTopPackages: row.include_top_packages,
-		topPackagesLimit: row.top_packages_limit
+		notifyOnFailure: row.notify_on_failure
 	};
 }
 
