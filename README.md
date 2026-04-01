@@ -24,6 +24,28 @@ Package Version Wizard es una app SSR para analizar `package.json` de proyectos 
 - `Slack OAuth` + publicación desde `n8n`
 - `Docker` + `GHCR` + `Dokploy`
 
+Se desplegaron dos instancias gp.nano para alojar `n8n` y `dokploy`
+<img width="1821" height="623" alt="Image" src="https://github.com/user-attachments/assets/d7310258-467f-4ac4-a9a3-b138d5d90444" />
+
+1. En `n8n` corren dos workflows que se complementan:
+
+- `dependency-analysis`: es el workflow principal. Recibe el webhook privado desde la app cuando un usuario sube un `package.json`, valida el payload, normaliza y prioriza dependencias por riesgo, y usa un LLM de `Google Gemini` para convertir toda la investigación consolidada en un **resumen ejecutivo** y un **plan de upgrade por fases**. Después hace un callback firmado a la app para persistir el resultado y, si Slack está configurado, envía también el brief final con el enlace al análisis.
+
+- `package-research`: es el subworkflow de investigación profunda. Se ejecuta solo para los paquetes más sensibles (`major`, `deprecated` o casos que requieren revisión manual), combina metadata del registro de `npm`, releases y documentación del repositorio con búsquedas externas usando `Tavily Search` y `Tavily Extract`, y finalmente vuelve a apoyarse en `Google Gemini` para estructurar la evidencia y generar un brief por paquete que luego consume el workflow principal.
+
+<img width="3177" height="726" alt="Image" src="https://github.com/user-attachments/assets/32c2fda1-2713-43fb-8993-7516ed240db1" />
+
+<img width="3081" height="1324" alt="Image" src="https://github.com/user-attachments/assets/d5bb29d0-01b4-45a5-aa71-4b5c95fd2298" />
+
+2. En `Dokploy` corren dos servicios principales:
+
+- La web SSR basada en `SvelteKit` con `adapter-node`. El flujo de entrega está preparado para que `GitHub Actions` construya la imagen Docker, la publique en `GHCR` y `Dokploy` haga el pull y el redeploy. Esto fue una decisión importante para adaptarme a las limitaciones de una VPS `nano`: compilar y desplegar directamente en el servidor consumía demasiada CPU y terminaba degradando o colapsando la instancia. Con este enfoque, CubePath queda enfocado en ejecutar la app, no en construirla.
+
+- Una base de datos `PostgreSQL` persistente para almacenar usuarios, sesiones, proyectos, análisis, dependencias normalizadas, callbacks de `n8n` y configuración de Slack. Esto me permitió convertir el proyecto en una app full-stack real, con resultados persistidos, ownership por usuario y análisis compartibles, en lugar de dejarlo como una demo efímera.
+
+<img width="2278" height="768" alt="Image" src="https://github.com/user-attachments/assets/579053b5-ba1d-4935-b152-3c65fc0a6f19" />
+
+
 ## Flujo principal
 
 1. Un usuario autenticado sube un `package.json`.
