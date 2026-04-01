@@ -2,6 +2,8 @@
 
 Package Version Wizard es una app SSR para analizar `package.json` de proyectos npm. El flujo real del repo valida y parsea el archivo en servidor, consulta el registry de npm para enriquecer dependencias, persiste el análisis en Postgres, dispara un workflow privado de `n8n` y presenta un brief AI con plan de upgrade, detalle por paquete, fuentes y estado de notificación opcional en Slack.
 
+MVP : https://hackathon.jamesjh.top/
+
 ## Qué incluye hoy
 
 - Landing pública en `/`
