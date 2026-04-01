@@ -44,7 +44,8 @@
 			{/if}
 		{:else if $page.url.searchParams.get('slack') === 'connected-sync-error'}
 			<div class="alert-box alert-box--amber">
-				Slack conectado, pero la sincronización de la credencial con n8n falló.
+				Slack conectado. La sincronización opcional con n8n falló, pero el backend aún puede enviar
+				notificaciones.
 			</div>
 		{:else if $page.url.searchParams.get('slack') === 'connect-error'}
 			<div class="alert-box alert-box--red">La instalación o sincronización con n8n falló.</div>
@@ -109,8 +110,8 @@
 									</p>
 									<p class="mt-1 text-xs leading-6 text-[var(--text-muted-relaxed)]">
 										{data.slack.workspace.n8nSyncStatus === 'synced'
-											? 'Slack y n8n ya quedaron listos para usar estos defaults.'
-											: 'La instalación existe, pero aún necesitas completar la sincronización con n8n.'}
+											? 'El workspace ya quedó listo para usar estos defaults.'
+											: 'El workspace ya funciona para notificaciones; la sincronización con n8n quedó pendiente.'}
 									</p>
 								</div>
 							</div>
@@ -246,8 +247,8 @@
 								</span>
 							</div>
 							<p class="mt-2 text-sm leading-7 text-[var(--text-muted-relaxed)]">
-								Si activas al menos un evento, los nuevos análisis publicarán en el canal elegido.
-								Si apagas ambos, Slack queda en pausa sin borrar el canal.
+								Si activas al menos un evento, los nuevos análisis se publicarán en el canal
+								elegido. Si apagas ambos, se desactivan las notificaciones.
 							</p>
 						</div>
 					</div>

@@ -31,6 +31,11 @@ interface SlackChannelListResponse {
 	};
 }
 
+interface SlackPostMessageResponse {
+	ok: boolean;
+	error?: string;
+}
+
 export function getSlackInstallRedirectUri(appBaseUrl: string) {
 	return `${appBaseUrl}/settings/integrations/slack/callback`;
 }
@@ -153,4 +158,30 @@ export async function listSlackChannels(accessToken: string): Promise<SlackChann
 	}
 
 	return channels.sort((left, right) => left.name.localeCompare(right.name, 'es'));
+}
+
+export async function postSlackMessage(input: {
+	accessToken: string;
+	channelId: string;
+	text: string;
+}) {
+	const response = await fetch(`${SLACK_API_BASE_URL}/chat.postMessage`, {
+		method: 'POST',
+		headers: {
+			authorization: `Bearer ${input.accessToken}`,
+			'content-type': 'application/json; charset=utf-8'
+		},
+		body: JSON.stringify({
+			channel: input.channelId,
+			text: input.text,
+			mrkdwn: true,
+			unfurl_links: false,
+			unfurl_media: false
+		})
+	});
+	const payload = (await response.json()) as SlackPostMessageResponse;
+
+	if (!response.ok || !payload.ok) {
+		throw new Error(`Slack no pudo enviar el mensaje${payload.error ? `: ${payload.error}` : '.'}`);
+	}
 }

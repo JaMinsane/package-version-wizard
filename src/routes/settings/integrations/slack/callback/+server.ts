@@ -1,7 +1,11 @@
 import { redirect } from '@sveltejs/kit';
 
 import type { RequestHandler } from './$types';
-import { completeSlackInstallation, getSlackOAuthStateCookieName } from '$lib/server/slack/service';
+import {
+	completeSlackInstallation,
+	getSlackOAuthStateCookieName,
+	parseSlackOAuthStateCookieValue
+} from '$lib/server/slack/service';
 
 export const GET: RequestHandler = async ({ url, locals, cookies }) => {
 	if (!locals.user) {
@@ -11,7 +15,9 @@ export const GET: RequestHandler = async ({ url, locals, cookies }) => {
 	const state = url.searchParams.get('state');
 	const code = url.searchParams.get('code');
 	const error = url.searchParams.get('error');
-	const expectedState = cookies.get(getSlackOAuthStateCookieName());
+	const expectedState = parseSlackOAuthStateCookieValue(
+		cookies.get(getSlackOAuthStateCookieName())
+	);
 
 	cookies.delete(getSlackOAuthStateCookieName(), { path: '/' });
 
@@ -19,7 +25,13 @@ export const GET: RequestHandler = async ({ url, locals, cookies }) => {
 		throw redirect(303, '/settings/integrations/slack?slack=denied');
 	}
 
-	if (!state || !expectedState || state !== expectedState || !code) {
+	if (
+		!state ||
+		!expectedState ||
+		expectedState.userId !== locals.user.id ||
+		state !== expectedState.state ||
+		!code
+	) {
 		throw redirect(303, '/settings/integrations/slack?slack=invalid-state');
 	}
 

@@ -104,7 +104,7 @@ export async function startUploadedAnalysis(input: {
 			dependencies
 		});
 
-		const response = await sendAnalysisToN8n(requestPayload);
+		const response = await sendAnalysisToN8n(buildN8nWebhookRequest(requestPayload));
 		await markAnalysisWebhookAccepted(analysisId, response);
 	} catch (error) {
 		const message =
@@ -289,6 +289,18 @@ function buildN8nAnalysisRequest(input: {
 			.slice(0, MAX_N8N_CANDIDATES),
 		notificationContext: {
 			slack: input.notificationContext
+		}
+	};
+}
+
+function buildN8nWebhookRequest(payload: N8nAnalysisRequest): N8nAnalysisRequest {
+	return {
+		...payload,
+		notificationContext: {
+			slack: {
+				...payload.notificationContext.slack,
+				reason: payload.notificationContext.slack.reason ?? 'server_managed_delivery'
+			}
 		}
 	};
 }

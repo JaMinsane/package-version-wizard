@@ -46,7 +46,7 @@ export const DEFAULT_SLACK_PREFERENCES: SlackPreferenceSettings = {
 	notifyOnFailure: false
 };
 
-export async function getActiveSlackWorkspace() {
+export async function getActiveSlackWorkspace(userId: string) {
 	const db = getDb();
 	const rows = await db<SlackWorkspaceRow[]>`
 		SELECT
@@ -65,7 +65,8 @@ export async function getActiveSlackWorkspace() {
 			created_at,
 			updated_at
 		FROM slack_workspaces
-		WHERE is_active = true
+		WHERE installed_by_user_id = ${userId}
+			AND is_active = true
 		ORDER BY updated_at DESC
 		LIMIT 1
 	`;
@@ -73,12 +74,13 @@ export async function getActiveSlackWorkspace() {
 	return rows[0] ? mapWorkspaceRow(rows[0]) : null;
 }
 
-export async function getActiveSlackWorkspaceSecret() {
+export async function getActiveSlackWorkspaceSecret(userId: string) {
 	const db = getDb();
 	const rows = await db<SlackWorkspaceSecretRow[]>`
 		SELECT id, bot_access_token_encrypted
 		FROM slack_workspaces
-		WHERE is_active = true
+		WHERE installed_by_user_id = ${userId}
+			AND is_active = true
 		ORDER BY updated_at DESC
 		LIMIT 1
 	`;
@@ -106,7 +108,8 @@ export async function upsertActiveSlackWorkspace(input: {
 		await tx`
 			UPDATE slack_workspaces
 			SET is_active = false, updated_at = now()
-			WHERE is_active = true
+			WHERE installed_by_user_id = ${input.installedByUserId}
+				AND is_active = true
 				AND slack_team_id <> ${input.slackTeamId}
 		`;
 
@@ -137,7 +140,7 @@ export async function upsertActiveSlackWorkspace(input: {
 				NULL,
 				NULL
 			)
-			ON CONFLICT (slack_team_id)
+			ON CONFLICT (installed_by_user_id, slack_team_id)
 			DO UPDATE SET
 				team_name = EXCLUDED.team_name,
 				bot_user_id = EXCLUDED.bot_user_id,
@@ -152,24 +155,45 @@ export async function upsertActiveSlackWorkspace(input: {
 		`;
 	});
 
-	return getActiveSlackWorkspace();
+	return getActiveSlackWorkspace(input.installedByUserId);
 }
 
-export async function clearSlackWorkspaceInstallation() {
+export async function clearSlackPreferenceData(userId: string) {
+	const db = getDb();
+
+	await db`
+		DELETE FROM project_notification_settings pns
+		USING projects p
+		WHERE pns.project_id = p.id
+			AND p.owner_user_id = ${userId}
+	`;
+
+	await db`
+		DELETE FROM user_slack_preferences
+		WHERE user_id = ${userId}
+	`;
+}
+
+export async function clearSlackWorkspaceInstallation(userId: string) {
 	const db = getDb();
 
 	return db.begin(async (tx: DatabaseClient) => {
 		const deletedWorkspaces = await tx<{ id: string }[]>`
 			DELETE FROM slack_workspaces
+			WHERE installed_by_user_id = ${userId}
 			RETURNING id
 		`;
 
 		await tx`
-			DELETE FROM project_notification_settings
+			DELETE FROM project_notification_settings pns
+			USING projects p
+			WHERE pns.project_id = p.id
+				AND p.owner_user_id = ${userId}
 		`;
 
 		await tx`
 			DELETE FROM user_slack_preferences
+			WHERE user_id = ${userId}
 		`;
 
 		return deletedWorkspaces.length;

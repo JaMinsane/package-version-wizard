@@ -44,7 +44,7 @@ export const actions: Actions = {
 		}
 
 		try {
-			await disconnectSlackWorkspace();
+			await disconnectSlackWorkspace(locals.user.id);
 
 			return {
 				successMessage: 'Workspace de Slack desconectado y limpiado de la base de datos.'

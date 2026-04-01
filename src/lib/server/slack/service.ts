@@ -5,11 +5,13 @@ import { getOptionalTrimmedString, formDataHasCheckedValue } from '$lib/server/f
 import {
 	buildSlackInstallUrl,
 	exchangeSlackOAuthCode,
-	listSlackChannels
+	listSlackChannels,
+	postSlackMessage
 } from '$lib/server/slack/client';
 import { decryptSlackToken, encryptSlackToken } from '$lib/server/slack/crypto';
 import { syncManagedSlackCredential } from '$lib/server/slack/n8n';
 import {
+	clearSlackPreferenceData,
 	clearSlackWorkspaceInstallation,
 	DEFAULT_SLACK_PREFERENCES,
 	getActiveSlackWorkspace,
@@ -21,11 +23,13 @@ import {
 	upsertProjectSlackSettings,
 	upsertUserSlackPreferences
 } from '$lib/server/slack/repository';
+import type { AnalysisSnapshot } from '$lib/server/analysis/types';
 import type {
 	AnalysisSlackPanelData,
 	ProjectSlackNotificationSettings,
 	SlackChannelOption,
 	SlackNotificationContext,
+	SlackNotificationResult,
 	SlackPreferenceSettings,
 	SlackSettingsPageData
 } from '$lib/server/slack/types';
@@ -44,6 +48,31 @@ export function isSlackInstallConfigured() {
 
 export function getSlackOAuthStateCookieName() {
 	return SLACK_OAUTH_STATE_COOKIE;
+}
+
+export function createSlackOAuthStateCookieValue(input: { state: string; userId: string }) {
+	return JSON.stringify(input);
+}
+
+export function parseSlackOAuthStateCookieValue(value?: string | null) {
+	if (!value) {
+		return null;
+	}
+
+	try {
+		const parsed = JSON.parse(value) as { state?: unknown; userId?: unknown };
+
+		if (typeof parsed.state !== 'string' || typeof parsed.userId !== 'string') {
+			return null;
+		}
+
+		return {
+			state: parsed.state,
+			userId: parsed.userId
+		};
+	} catch {
+		return null;
+	}
 }
 
 export function createSlackInstallUrl() {
@@ -75,6 +104,7 @@ export async function completeSlackInstallation(input: { code: string; userId: s
 		code: input.code,
 		appBaseUrl
 	});
+	const previousWorkspace = await getActiveSlackWorkspace(input.userId);
 
 	const workspace = await upsertActiveSlackWorkspace({
 		id: `slack_workspace_${crypto.randomUUID()}`,
@@ -88,6 +118,10 @@ export async function completeSlackInstallation(input: { code: string; userId: s
 
 	if (!workspace) {
 		throw new Error('No se pudo persistir la instalación de Slack.');
+	}
+
+	if (previousWorkspace && previousWorkspace.teamId !== installation.teamId) {
+		await clearSlackPreferenceData(input.userId);
 	}
 
 	try {
@@ -110,24 +144,24 @@ export async function completeSlackInstallation(input: { code: string; userId: s
 		});
 	}
 
-	return getActiveSlackWorkspace();
+	return getActiveSlackWorkspace(input.userId);
 }
 
-export async function disconnectSlackWorkspace() {
-	const workspace = await getActiveSlackWorkspace();
+export async function disconnectSlackWorkspace(userId: string) {
+	const workspace = await getActiveSlackWorkspace(userId);
 
 	if (!workspace) {
 		throw new Error('No hay un workspace de Slack conectado.');
 	}
 
-	await clearSlackWorkspaceInstallation();
+	await clearSlackWorkspaceInstallation(userId);
 }
 
 export async function getSlackSettingsPageData(userId: string): Promise<SlackSettingsPageData> {
 	const [workspace, defaults, channels] = await Promise.all([
-		getActiveSlackWorkspace(),
+		getActiveSlackWorkspace(userId),
 		getUserSlackPreferences(userId),
-		getSlackChannelsForWorkspaceSafe()
+		getSlackChannelsForWorkspaceSafe(userId)
 	]);
 
 	return {
@@ -158,8 +192,8 @@ export async function getAnalysisSlackPanelData(input: {
 	}
 
 	const [workspace, channels, userDefaults, projectSettings] = await Promise.all([
-		getActiveSlackWorkspace(),
-		getSlackChannelsForWorkspaceSafe(),
+		getActiveSlackWorkspace(input.viewerUserId),
+		getSlackChannelsForWorkspaceSafe(input.viewerUserId),
 		getUserSlackPreferences(input.viewerUserId),
 		getProjectSlackSettings(input.projectId)
 	]);
@@ -181,7 +215,7 @@ export async function saveUserSlackPreferencesFromForm(userId: string, formData:
 		notifyOnSuccess: formDataHasCheckedValue(formData, 'notifyOnSuccess'),
 		notifyOnFailure: formDataHasCheckedValue(formData, 'notifyOnFailure')
 	});
-	const channels = await getSlackChannelsForWorkspace();
+	const channels = await getSlackChannelsForWorkspace(userId);
 	const channel = validateChannelSelection(
 		parsed.notifyOnSuccess || parsed.notifyOnFailure,
 		parsed.channelId,
@@ -198,6 +232,7 @@ export async function saveUserSlackPreferencesFromForm(userId: string, formData:
 
 export async function saveProjectSlackSettingsFromForm(input: {
 	projectId: string;
+	userId: string;
 	formData: FormData;
 }) {
 	const parsed = projectSlackPreferenceSchema.parse({
@@ -206,7 +241,7 @@ export async function saveProjectSlackSettingsFromForm(input: {
 		notifyOnSuccess: formDataHasCheckedValue(input.formData, 'notifyOnSuccess'),
 		notifyOnFailure: formDataHasCheckedValue(input.formData, 'notifyOnFailure')
 	});
-	const channels = await getSlackChannelsForWorkspace();
+	const channels = await getSlackChannelsForWorkspace(input.userId);
 	const channel = parsed.inheritUserDefaults
 		? undefined
 		: validateChannelSelection(
@@ -229,7 +264,7 @@ export async function resolveSlackNotificationContext(input: {
 	requestedByUserId: string;
 	requestedByUserName: string;
 }): Promise<SlackNotificationContext> {
-	const workspace = await getActiveSlackWorkspace();
+	const workspace = await getActiveSlackWorkspace(input.requestedByUserId);
 
 	if (!workspace) {
 		return {
@@ -237,16 +272,6 @@ export async function resolveSlackNotificationContext(input: {
 			requestedByUserId: input.requestedByUserId,
 			requestedByUserName: input.requestedByUserName,
 			reason: 'slack_not_installed',
-			...DEFAULT_SLACK_PREFERENCES
-		};
-	}
-
-	if (workspace.n8nSyncStatus !== 'synced') {
-		return {
-			workspaceInstalled: true,
-			requestedByUserId: input.requestedByUserId,
-			requestedByUserName: input.requestedByUserName,
-			reason: 'slack_workspace_not_synced',
 			...DEFAULT_SLACK_PREFERENCES
 		};
 	}
@@ -260,6 +285,8 @@ export async function resolveSlackNotificationContext(input: {
 	if (isSlackNotificationPaused(effective)) {
 		return {
 			workspaceInstalled: true,
+			workspaceId: workspace.id,
+			workspaceTeamId: workspace.teamId,
 			requestedByUserId: input.requestedByUserId,
 			requestedByUserName: input.requestedByUserName,
 			reason: 'notifications_paused',
@@ -270,6 +297,8 @@ export async function resolveSlackNotificationContext(input: {
 	if (!effective.channelId) {
 		return {
 			workspaceInstalled: true,
+			workspaceId: workspace.id,
+			workspaceTeamId: workspace.teamId,
 			requestedByUserId: input.requestedByUserId,
 			requestedByUserName: input.requestedByUserName,
 			reason: 'missing_channel',
@@ -279,6 +308,8 @@ export async function resolveSlackNotificationContext(input: {
 
 	return {
 		workspaceInstalled: true,
+		workspaceId: workspace.id,
+		workspaceTeamId: workspace.teamId,
 		requestedByUserId: input.requestedByUserId,
 		requestedByUserName: input.requestedByUserName,
 		...effective
@@ -301,8 +332,101 @@ export function resolveEffectiveSlackSettings(
 	};
 }
 
-async function getSlackChannelsForWorkspace(): Promise<SlackChannelOption[]> {
-	const workspaceSecret = await getActiveSlackWorkspaceSecret();
+export async function deliverSlackNotificationForAnalysis(
+	analysis: AnalysisSnapshot
+): Promise<SlackNotificationResult> {
+	const slack = analysis.requestPayload.notificationContext.slack;
+	const shouldNotify = analysis.status === 'failed' ? slack.notifyOnFailure : slack.notifyOnSuccess;
+	const skippedBase = {
+		attempted: false,
+		status: 'skipped' as const,
+		channelId: slack.channelId,
+		channelName: slack.channelName
+	};
+
+	if (slack.reason) {
+		return {
+			...skippedBase,
+			reason: slack.reason
+		};
+	}
+
+	if (!slack.workspaceInstalled) {
+		return {
+			...skippedBase,
+			reason: 'slack_not_installed'
+		};
+	}
+
+	if (!slack.channelId) {
+		return {
+			...skippedBase,
+			reason: 'missing_channel'
+		};
+	}
+
+	if (!shouldNotify) {
+		return {
+			...skippedBase,
+			reason:
+				analysis.status === 'failed'
+					? 'failure_notifications_disabled'
+					: 'success_notifications_disabled'
+		};
+	}
+
+	const [workspace, workspaceSecret] = await Promise.all([
+		getActiveSlackWorkspace(slack.requestedByUserId),
+		getActiveSlackWorkspaceSecret(slack.requestedByUserId)
+	]);
+
+	if (!workspace || !workspaceSecret) {
+		return {
+			...skippedBase,
+			reason: 'slack_not_installed'
+		};
+	}
+
+	if (
+		(slack.workspaceId && workspace.id !== slack.workspaceId) ||
+		(slack.workspaceTeamId && workspace.teamId !== slack.workspaceTeamId)
+	) {
+		return {
+			...skippedBase,
+			reason: 'workspace_changed'
+		};
+	}
+
+	try {
+		await postSlackMessage({
+			accessToken: decryptSlackToken(workspaceSecret.encryptedAccessToken),
+			channelId: slack.channelId,
+			text: buildSlackNotificationMessage(analysis)
+		});
+
+		return {
+			attempted: true,
+			status: 'sent',
+			channelId: slack.channelId,
+			channelName: slack.channelName,
+			notifiedAt: new Date().toISOString()
+		};
+	} catch (error) {
+		return {
+			attempted: true,
+			status: 'failed',
+			channelId: slack.channelId,
+			channelName: slack.channelName,
+			reason:
+				error instanceof Error
+					? error.message
+					: 'No se pudo enviar la notificación de Slack desde el servidor.'
+		};
+	}
+}
+
+async function getSlackChannelsForWorkspace(userId: string): Promise<SlackChannelOption[]> {
+	const workspaceSecret = await getActiveSlackWorkspaceSecret(userId);
 
 	if (!workspaceSecret) {
 		return [];
@@ -311,9 +435,9 @@ async function getSlackChannelsForWorkspace(): Promise<SlackChannelOption[]> {
 	return listSlackChannels(decryptSlackToken(workspaceSecret.encryptedAccessToken));
 }
 
-async function getSlackChannelsForWorkspaceSafe() {
+async function getSlackChannelsForWorkspaceSafe(userId: string) {
 	try {
-		return await getSlackChannelsForWorkspace();
+		return await getSlackChannelsForWorkspace(userId);
 	} catch {
 		return [];
 	}
@@ -345,4 +469,34 @@ function validateChannelSelection(
 
 function isSlackNotificationPaused(settings: SlackPreferenceSettings) {
 	return !settings.notifyOnSuccess && !settings.notifyOnFailure;
+}
+
+function buildSlackNotificationMessage(analysis: AnalysisSnapshot) {
+	const digest = analysis.callbackPayload?.slackDigestMd?.trim();
+	const summary = analysis.callbackPayload?.executiveSummaryMd?.trim();
+	const fallbackDigest =
+		digest ||
+		getFirstNonEmptyLine(summary) ||
+		(analysis.status === 'failed'
+			? 'El workflow terminó con error. Revisa el análisis completo.'
+			: 'El brief del análisis ya está listo para revisión.');
+
+	return [
+		`*${analysis.requestPayload.projectName}*`,
+		`Estado: ${analysis.status}`,
+		`Outdated: ${analysis.requestPayload.dependencyStats.outdated} · Major: ${analysis.requestPayload.dependencyStats.majors} · Deprecated: ${analysis.requestPayload.dependencyStats.deprecated}`,
+		fallbackDigest,
+		analysis.requestPayload.analysisUrl
+			? `Analisis completo: ${analysis.requestPayload.analysisUrl}`
+			: undefined
+	]
+		.filter((line): line is string => Boolean(line))
+		.join('\n');
+}
+
+function getFirstNonEmptyLine(value?: string) {
+	return value
+		?.split('\n')
+		.map((line) => line.trim())
+		.find(Boolean);
 }

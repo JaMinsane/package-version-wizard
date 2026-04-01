@@ -38,6 +38,8 @@ export interface SlackWorkspaceSnapshot {
 
 export interface SlackNotificationContext extends SlackPreferenceSettings {
 	workspaceInstalled: boolean;
+	workspaceId?: string;
+	workspaceTeamId?: string;
 	requestedByUserId: string;
 	requestedByUserName: string;
 	reason?: string;

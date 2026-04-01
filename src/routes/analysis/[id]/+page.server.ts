@@ -47,6 +47,7 @@ export const actions: Actions = {
 		try {
 			await saveProjectSlackSettingsFromForm({
 				projectId: project.id,
+				userId: locals.user.id,
 				formData
 			});
 
