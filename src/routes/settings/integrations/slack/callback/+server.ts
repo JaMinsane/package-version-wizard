@@ -23,8 +23,10 @@ export const GET: RequestHandler = async ({ url, locals, cookies }) => {
 		throw redirect(303, '/settings/integrations/slack?slack=invalid-state');
 	}
 
+	let workspace;
+
 	try {
-		await completeSlackInstallation({
+		workspace = await completeSlackInstallation({
 			code,
 			userId: locals.user.id
 		});
@@ -32,5 +34,9 @@ export const GET: RequestHandler = async ({ url, locals, cookies }) => {
 		throw redirect(303, '/settings/integrations/slack?slack=connect-error');
 	}
 
-	throw redirect(303, '/settings/integrations/slack?slack=connected');
+	if (workspace?.n8nSyncStatus === 'synced') {
+		throw redirect(303, '/settings/integrations/slack?slack=connected');
+	}
+
+	throw redirect(303, '/settings/integrations/slack?slack=connected-sync-error');
 };

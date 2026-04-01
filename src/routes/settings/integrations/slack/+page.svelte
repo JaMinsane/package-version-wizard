@@ -31,8 +31,18 @@
 	<div class="mx-auto flex max-w-5xl flex-col gap-6">
 		<!-- Status alerts -->
 		{#if $page.url.searchParams.get('slack') === 'connected'}
-			<div class="alert-box alert-box--green">
-				Slack conectado. Credencial sincronizada con n8n.
+			{#if data.slack.workspace?.n8nSyncStatus === 'synced'}
+				<div class="alert-box alert-box--green">
+					Slack conectado. Credencial sincronizada con n8n.
+				</div>
+			{:else}
+				<div class="alert-box alert-box--amber">
+					Slack conectado, pero la credencial aún no quedó sincronizada con n8n.
+				</div>
+			{/if}
+		{:else if $page.url.searchParams.get('slack') === 'connected-sync-error'}
+			<div class="alert-box alert-box--amber">
+				Slack conectado, pero la sincronización de la credencial con n8n falló.
 			</div>
 		{:else if $page.url.searchParams.get('slack') === 'connect-error'}
 			<div class="alert-box alert-box--red">La instalación o sincronización con n8n falló.</div>
@@ -87,7 +97,12 @@
 					class="mt-6 rounded-lg border border-[var(--border-green)] bg-[rgba(10,10,15,0.45)] p-6"
 				>
 					{#if data.slack.installReady}
-						<a href="/settings/integrations/slack/connect" class="slack-install-button">
+						<a
+							href="/settings/integrations/slack/connect"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="slack-install-button"
+						>
 							<img src={slackLogo} alt="Slack" class="h-6 w-6" />
 							<span class="font-bold">
 								{data.slack.workspace ? 'Reconectar workspace' : 'Conectar con Slack'}

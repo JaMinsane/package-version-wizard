@@ -56,9 +56,7 @@ async function createN8nCredential(accessToken: string) {
 		body: JSON.stringify({
 			name: MANAGED_N8N_SLACK_CREDENTIAL_NAME,
 			type: 'slackApi',
-			data: {
-				accessToken
-			}
+			data: buildSlackCredentialData(accessToken)
 		})
 	});
 
@@ -78,9 +76,7 @@ async function saveN8nCredential(
 			body: JSON.stringify({
 				name: MANAGED_N8N_SLACK_CREDENTIAL_NAME,
 				type: 'slackApi',
-				data: {
-					accessToken
-				}
+				data: buildSlackCredentialData(accessToken)
 			})
 		});
 	} catch (error) {
@@ -126,6 +122,14 @@ async function n8nRequest(path: string, init?: RequestInit) {
 	}
 
 	return response.json().catch(() => null);
+}
+
+function buildSlackCredentialData(accessToken: string) {
+	return {
+		accessToken,
+		signatureSecret: '',
+		notice: ''
+	};
 }
 
 function asCredentialRecord(value: unknown): N8nCredentialRecord {
