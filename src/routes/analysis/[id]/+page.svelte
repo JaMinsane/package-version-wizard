@@ -111,12 +111,12 @@
 		<AnalysisHero analysis={activeAnalysis} shareUrl={getShareUrl()} />
 
 		<section class="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
-			<AnalysisSidebar analysis={activeAnalysis} {isPolling} {pollingError} />
-
 			<div class="space-y-6">
+				<AnalysisSidebar analysis={activeAnalysis} {isPolling} {pollingError} />
 				<SlackNotificationPanel analysis={activeAnalysis} />
-				<AnalysisSummaryPanel analysis={activeAnalysis} />
 			</div>
+
+			<AnalysisSummaryPanel analysis={activeAnalysis} />
 		</section>
 
 		<div class="space-y-6">
