@@ -278,7 +278,7 @@
 		},
 		{
 			"parameters": {
-				"jsCode": "const base = $('Build Slack success payload').first().json;\nconst response = $input.first().json ?? {};\nconst errorMessage = response.error?.message ?? response.message ?? response.statusMessage ?? null;\nreturn [{\n  json: {\n    ...base,\n    slackNotification: {\n      attempted: true,\n      status: errorMessage ? 'failed' : 'sent',\n      channelId: base.slackNotification.channelId,\n      channelName: base.slackNotification.channelName,\n      reason: errorMessage ?? undefined,\n      notifiedAt: new Date().toISOString()\n    }\n  }\n}];"
+				"jsCode": "const base = $('Build Slack success payload').first().json;\nconst response = $input.first().json ?? {};\nconst rawErrorMessage = response.error?.message ?? response.message ?? response.statusMessage ?? null;\nconst errorMessage = typeof rawErrorMessage === 'string' ? rawErrorMessage.trim() || null : null;\nreturn [{\n  json: {\n    ...base,\n    slackNotification: {\n      attempted: true,\n      status: errorMessage ? 'failed' : 'sent',\n      channelId: base.slackNotification.channelId,\n      channelName: base.slackNotification.channelName,\n      reason: errorMessage ?? undefined,\n      notifiedAt: new Date().toISOString()\n    }\n  }\n}];"
 			},
 			"type": "n8n-nodes-base.code",
 			"typeVersion": 2,
@@ -340,7 +340,7 @@
 		},
 		{
 			"parameters": {
-				"jsCode": "const base = $('Build Slack failure payload').first().json;\nconst response = $input.first().json ?? {};\nconst errorMessage = response.error?.message ?? response.message ?? response.statusMessage ?? null;\nreturn [{\n  json: {\n    ...base,\n    slackNotification: {\n      attempted: true,\n      status: errorMessage ? 'failed' : 'sent',\n      channelId: base.slackNotification.channelId,\n      channelName: base.slackNotification.channelName,\n      reason: errorMessage ?? undefined,\n      notifiedAt: new Date().toISOString()\n    }\n  }\n}];"
+				"jsCode": "const base = $('Build Slack failure payload').first().json;\nconst response = $input.first().json ?? {};\nconst rawErrorMessage = response.error?.message ?? response.message ?? response.statusMessage ?? null;\nconst errorMessage = typeof rawErrorMessage === 'string' ? rawErrorMessage.trim() || null : null;\nreturn [{\n  json: {\n    ...base,\n    slackNotification: {\n      attempted: true,\n      status: errorMessage ? 'failed' : 'sent',\n      channelId: base.slackNotification.channelId,\n      channelName: base.slackNotification.channelName,\n      reason: errorMessage ?? undefined,\n      notifiedAt: new Date().toISOString()\n    }\n  }\n}];"
 			},
 			"type": "n8n-nodes-base.code",
 			"typeVersion": 2,

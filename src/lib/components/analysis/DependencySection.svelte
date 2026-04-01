@@ -3,6 +3,7 @@
 	import type { AnalysisDependency } from '$lib/ui/analysis/types';
 
 	interface Props {
+		terminalTitle: string;
 		eyebrow: string;
 		title: string;
 		description: string;
@@ -10,7 +11,7 @@
 		emptyMessage: string;
 	}
 
-	let { eyebrow, title, description, items, emptyMessage }: Props = $props();
+	let { terminalTitle, eyebrow, title, description, items, emptyMessage }: Props = $props();
 </script>
 
 <section class="terminal-window">
@@ -20,7 +21,7 @@
 			<span class="terminal-dot terminal-dot--yellow"></span>
 			<span class="terminal-dot terminal-dot--green"></span>
 		</div>
-		<span class="terminal-title">$ deps --list</span>
+		<span class="terminal-title">$ {terminalTitle}</span>
 	</div>
 
 	<div class="terminal-body">

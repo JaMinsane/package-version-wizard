@@ -3,6 +3,7 @@
 
 	import AnalysisHero from '$lib/components/analysis/AnalysisHero.svelte';
 	import AnalysisSidebar from '$lib/components/analysis/AnalysisSidebar.svelte';
+	import SlackNotificationPanel from '$lib/components/analysis/SlackNotificationPanel.svelte';
 	import AnalysisSummaryPanel from '$lib/components/analysis/AnalysisSummaryPanel.svelte';
 	import DependencySection from '$lib/components/analysis/DependencySection.svelte';
 	import PackageBriefCard from '$lib/components/analysis/PackageBriefCard.svelte';
@@ -10,14 +11,12 @@
 	import TechnicalPanel from '$lib/components/analysis/TechnicalPanel.svelte';
 	import { isCoveredBySpec } from '$lib/ui/analysis/helpers';
 
-	import type { ActionData, PageData } from './$types';
+	import type { PageData } from './$types';
 
 	let {
-		data: initialData,
-		form
+		data: initialData
 	}: {
 		data: PageData;
-		form: ActionData;
 	} = $props();
 
 	function getInitialAnalysis() {
@@ -104,10 +103,7 @@
 
 <svelte:head>
 	<title>{activeAnalysis.project.name} | Package Version Wizard</title>
-	<meta
-		name="description"
-		content="Análisis de dependencias con brief AI y notificación Slack."
-	/>
+	<meta name="description" content="Análisis de dependencias con brief AI y notificación Slack." />
 </svelte:head>
 
 <div class="min-h-screen px-4 py-6 sm:px-6 lg:px-10">
@@ -115,67 +111,63 @@
 		<AnalysisHero analysis={activeAnalysis} shareUrl={getShareUrl()} />
 
 		<section class="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
-			<AnalysisSidebar
-				analysis={activeAnalysis}
-				formSuccessMessage={form?.successMessage}
-				formErrorMessage={form?.errorMessage}
-				{isPolling}
-				{pollingError}
-				slack={initialData.slack}
-			/>
+			<AnalysisSidebar analysis={activeAnalysis} {isPolling} {pollingError} />
 
 			<div class="space-y-6">
+				<SlackNotificationPanel analysis={activeAnalysis} />
 				<AnalysisSummaryPanel analysis={activeAnalysis} />
-
-				<DependencySection
-					eyebrow="Requieren acción"
-					title="Dependencias que conviene mover"
-					description="Requieren cambio en el package.json o revisión manual antes de avanzar."
-					items={criticalDependencies}
-					emptyMessage="Ninguna dependencia requiere cambio inmediato en el package.json."
-				/>
-
-				{#if coveredBySpecDependencies.length}
-					<DependencySection
-						eyebrow="Cubiertas por el rango"
-						title="Ya resueltas por el package.json"
-						description="El rango declarado ya cubre la latest o están alineadas. No requieren cambios."
-						items={coveredBySpecDependencies}
-						emptyMessage=""
-					/>
-				{/if}
-
-				{#if activeAnalysis.callbackPayload?.packageBriefs.length}
-					<section class="terminal-window">
-						<div class="terminal-bar">
-							<div class="terminal-dots">
-								<span class="terminal-dot terminal-dot--red"></span>
-								<span class="terminal-dot terminal-dot--yellow"></span>
-								<span class="terminal-dot terminal-dot--green"></span>
-							</div>
-							<span class="terminal-title">$ briefs --all</span>
-						</div>
-						<div class="terminal-body">
-							<p class="section-label">Detalle por paquete</p>
-							<h2 class="mt-3 text-2xl font-bold tracking-tight text-white">
-								Contexto por paquete
-							</h2>
-
-							<div class="mt-6 grid gap-4 xl:grid-cols-2">
-								{#each activeAnalysis.callbackPayload.packageBriefs as brief}
-									<PackageBriefCard {brief} />
-								{/each}
-							</div>
-						</div>
-					</section>
-				{/if}
-
-				{#if activeAnalysis.callbackPayload?.sources.length}
-					<SourcesPanel sources={activeAnalysis.callbackPayload.sources} />
-				{/if}
-
-				<TechnicalPanel {requestJson} {callbackJson} />
 			</div>
 		</section>
+
+		<div class="space-y-6">
+			<DependencySection
+				terminalTitle="deps --actionable"
+				eyebrow="Requieren acción"
+				title="Dependencias que conviene mover"
+				description="Requieren cambio en el package.json o revisión manual antes de avanzar."
+				items={criticalDependencies}
+				emptyMessage="Ninguna dependencia requiere cambio inmediato en el package.json."
+			/>
+
+			{#if coveredBySpecDependencies.length}
+				<DependencySection
+					terminalTitle="deps --resolved"
+					eyebrow="Cubiertas por el rango"
+					title="Ya resueltas por el package.json"
+					description="El rango declarado ya cubre la latest o están alineadas. No requieren cambios."
+					items={coveredBySpecDependencies}
+					emptyMessage=""
+				/>
+			{/if}
+
+			{#if activeAnalysis.callbackPayload?.packageBriefs.length}
+				<section class="terminal-window">
+					<div class="terminal-bar">
+						<div class="terminal-dots">
+							<span class="terminal-dot terminal-dot--red"></span>
+							<span class="terminal-dot terminal-dot--yellow"></span>
+							<span class="terminal-dot terminal-dot--green"></span>
+						</div>
+						<span class="terminal-title">$ briefs --all</span>
+					</div>
+					<div class="terminal-body">
+						<p class="section-label">Detalle por paquete</p>
+						<h2 class="mt-3 text-2xl font-bold tracking-tight text-white">Contexto por paquete</h2>
+
+						<div class="mt-6 grid gap-4 xl:grid-cols-2">
+							{#each activeAnalysis.callbackPayload.packageBriefs as brief}
+								<PackageBriefCard {brief} />
+							{/each}
+						</div>
+					</div>
+				</section>
+			{/if}
+
+			{#if activeAnalysis.callbackPayload?.sources.length}
+				<SourcesPanel sources={activeAnalysis.callbackPayload.sources} />
+			{/if}
+
+			<TechnicalPanel {requestJson} {callbackJson} />
+		</div>
 	</div>
 </div>

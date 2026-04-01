@@ -367,6 +367,10 @@ function asOptionalStringField(value: unknown, fieldName: string) {
 		return undefined;
 	}
 
+	if (typeof value === 'string' && !value.trim()) {
+		return undefined;
+	}
+
 	return asString(value, fieldName);
 }
 
