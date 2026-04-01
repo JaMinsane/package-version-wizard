@@ -44,8 +44,7 @@
 			{/if}
 		{:else if $page.url.searchParams.get('slack') === 'connected-sync-error'}
 			<div class="alert-box alert-box--amber">
-				Slack conectado. La sincronización opcional con n8n falló, pero el backend aún puede enviar
-				notificaciones.
+				Slack conectado, pero la sincronización de la credencial con n8n falló.
 			</div>
 		{:else if $page.url.searchParams.get('slack') === 'connect-error'}
 			<div class="alert-box alert-box--red">La instalación o sincronización con n8n falló.</div>
@@ -111,7 +110,7 @@
 									<p class="mt-1 text-xs leading-6 text-[var(--text-muted-relaxed)]">
 										{data.slack.workspace.n8nSyncStatus === 'synced'
 											? 'El workspace ya quedó listo para usar estos defaults.'
-											: 'El workspace ya funciona para notificaciones; la sincronización con n8n quedó pendiente.'}
+											: 'El workspace se guardó, pero la credencial administrada aún no quedó sincronizada con n8n.'}
 									</p>
 								</div>
 							</div>

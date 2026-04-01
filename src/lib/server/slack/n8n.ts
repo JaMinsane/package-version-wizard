@@ -60,9 +60,7 @@ async function createN8nCredential(accessToken: string) {
 		})
 	});
 
-	const record = asCredentialRecord(payload);
-
-	return record;
+	return asCredentialRecord(payload);
 }
 
 async function saveN8nCredential(

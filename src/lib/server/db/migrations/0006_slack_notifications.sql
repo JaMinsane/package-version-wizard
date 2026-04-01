@@ -13,7 +13,7 @@ ALTER TABLE analyses
 
 CREATE TABLE IF NOT EXISTS slack_workspaces (
 	id text PRIMARY KEY,
-	slack_team_id text NOT NULL UNIQUE,
+	slack_team_id text NOT NULL,
 	team_name text NOT NULL,
 	bot_user_id text,
 	scope text,
@@ -29,10 +29,6 @@ CREATE TABLE IF NOT EXISTS slack_workspaces (
 	created_at timestamptz NOT NULL DEFAULT now(),
 	updated_at timestamptz NOT NULL DEFAULT now()
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS slack_workspaces_single_active_idx
-	ON slack_workspaces ((1))
-	WHERE is_active = true;
 
 CREATE TABLE IF NOT EXISTS user_slack_preferences (
 	user_id text PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,

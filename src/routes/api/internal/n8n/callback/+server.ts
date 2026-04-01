@@ -3,13 +3,11 @@ import { json } from '@sveltejs/kit';
 
 import type { RequestHandler } from './$types';
 import type { N8nAnalysisCallback } from '$lib/server/analysis/types';
-import { updateAnalysisSlackNotification } from '$lib/server/analysis/repository';
 import {
 	failAnalysisFromInvalidN8nCallback,
 	parseN8nCallbackPayload,
 	persistN8nCallback
 } from '$lib/server/analysis/service';
-import { deliverSlackNotificationForAnalysis } from '$lib/server/slack/service';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const expectedSignature = env.N8N_CALLBACK_SECRET;
@@ -55,11 +53,6 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	if (result.type === 'missing') {
 		return json({ message: 'No existe un análisis para ese analysisId.' }, { status: 404 });
-	}
-
-	if (result.analysis?.callbackPayload && !result.analysis.slackNotification) {
-		const slackNotification = await deliverSlackNotificationForAnalysis(result.analysis);
-		await updateAnalysisSlackNotification(result.analysis.id, slackNotification);
 	}
 
 	if (result.type === 'duplicate') {

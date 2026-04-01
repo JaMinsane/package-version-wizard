@@ -392,7 +392,7 @@ export async function applyCallback(
 				package_briefs_json = CAST(${JSON.stringify(payload.packageBriefs)} AS jsonb),
 				sources_json = CAST(${JSON.stringify(payload.sources)} AS jsonb),
 				slack_digest_markdown = ${payload.slackDigestMd ?? null},
-				slack_notification_json = NULL,
+				slack_notification_json = CAST(${JSON.stringify(payload.slackNotification ?? null)} AS jsonb),
 				error_message = ${errorMessage},
 				last_idempotency_key = ${idempotencyKey},
 				updated_at = now(),
@@ -411,21 +411,6 @@ export async function applyCallback(
 		type: outcome.type,
 		analysis: (await getAnalysisById(payload.analysisId)) ?? undefined
 	};
-}
-
-export async function updateAnalysisSlackNotification(
-	analysisId: string,
-	payload: SlackNotificationResult
-) {
-	const db = getDb();
-
-	await db`
-		UPDATE analyses
-		SET
-			slack_notification_json = CAST(${JSON.stringify(payload)} AS jsonb),
-			updated_at = now()
-		WHERE id = ${analysisId}
-	`;
 }
 
 export async function getProjectById(id: string): Promise<ProjectSnapshot | null> {

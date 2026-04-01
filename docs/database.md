@@ -11,7 +11,7 @@ Postgres es la fuente de verdad de la app. La capa de acceso usa `Bun.SQL`; no h
 - snapshots completos de análisis
 - dependencias normalizadas por análisis
 - receipts del callback de `n8n` para idempotencia
-- workspace activo de Slack
+- workspaces de Slack por usuario
 - defaults de Slack por usuario
 - overrides de Slack por proyecto
 - auditoría del último resultado de notificación
@@ -151,10 +151,10 @@ Recibos para idempotencia del callback.
 
 ### `slack_workspaces`
 
-Workspace activo de Slack para el despliegue.
+Workspace activo de Slack por usuario.
 
 - `id` `text` PK
-- `slack_team_id` unique
+- `slack_team_id`
 - `team_name`
 - `bot_user_id`
 - `scope`
@@ -171,7 +171,8 @@ Workspace activo de Slack para el despliegue.
 
 Índices relevantes:
 
-- `slack_workspaces_single_active_idx`
+- `slack_workspaces_user_team_idx`
+- `slack_workspaces_user_active_idx`
 - `slack_workspaces_installed_by_idx`
 
 El token del bot se guarda cifrado y la app intenta sincronizarlo como credencial administrada dentro de `n8n`.

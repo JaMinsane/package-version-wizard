@@ -168,7 +168,7 @@ La implementación vive en [`src/lib/server/markdown.ts`](../src/lib/server/mark
 
 ### Modelo actual
 
-- Un workspace activo por despliegue.
+- Un workspace activo por usuario.
 - Instalación vía OAuth desde la app.
 - Token bot cifrado en Postgres.
 - Sincronización de una credencial administrada en `n8n`.
@@ -178,7 +178,7 @@ La implementación vive en [`src/lib/server/markdown.ts`](../src/lib/server/mark
 
 El contexto efectivo de Slack se calcula en servidor combinando:
 
-1. workspace activo
+1. workspace activo del usuario
 2. defaults del usuario
 3. override del proyecto
 

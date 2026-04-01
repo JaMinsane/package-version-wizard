@@ -152,7 +152,7 @@
 			</div>
 
 			<p class="mt-3 text-sm leading-7 text-[var(--text-muted-relaxed-relaxed)]">
-				El backend envía el mensaje final con estado, métricas, digest corto y link al análisis.
+				El workflow arma el mensaje final con estado, métricas, digest corto y link al análisis.
 			</p>
 
 			<div class="mt-6 grid gap-3">
@@ -289,6 +289,10 @@
 							class="underline decoration-dotted">settings</a
 						>
 						para activar notificaciones.
+					</div>
+				{:else if slack.workspace.n8nSyncStatus !== 'synced'}
+					<div class="alert-box alert-box--amber mt-4">
+						Slack está conectado, pero la credencial aún no quedó sincronizada con n8n.
 					</div>
 				{/if}
 			{:else}

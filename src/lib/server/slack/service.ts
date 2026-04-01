@@ -5,8 +5,7 @@ import { getOptionalTrimmedString, formDataHasCheckedValue } from '$lib/server/f
 import {
 	buildSlackInstallUrl,
 	exchangeSlackOAuthCode,
-	listSlackChannels,
-	postSlackMessage
+	listSlackChannels
 } from '$lib/server/slack/client';
 import { decryptSlackToken, encryptSlackToken } from '$lib/server/slack/crypto';
 import { syncManagedSlackCredential } from '$lib/server/slack/n8n';
@@ -23,13 +22,11 @@ import {
 	upsertProjectSlackSettings,
 	upsertUserSlackPreferences
 } from '$lib/server/slack/repository';
-import type { AnalysisSnapshot } from '$lib/server/analysis/types';
 import type {
 	AnalysisSlackPanelData,
 	ProjectSlackNotificationSettings,
 	SlackChannelOption,
 	SlackNotificationContext,
-	SlackNotificationResult,
 	SlackPreferenceSettings,
 	SlackSettingsPageData
 } from '$lib/server/slack/types';
@@ -276,6 +273,16 @@ export async function resolveSlackNotificationContext(input: {
 		};
 	}
 
+	if (workspace.n8nSyncStatus !== 'synced') {
+		return {
+			workspaceInstalled: true,
+			requestedByUserId: input.requestedByUserId,
+			requestedByUserName: input.requestedByUserName,
+			reason: 'slack_workspace_not_synced',
+			...DEFAULT_SLACK_PREFERENCES
+		};
+	}
+
 	const [userDefaults, projectSettings] = await Promise.all([
 		getUserSlackPreferences(input.requestedByUserId),
 		getProjectSlackSettings(input.projectId)
@@ -332,99 +339,6 @@ export function resolveEffectiveSlackSettings(
 	};
 }
 
-export async function deliverSlackNotificationForAnalysis(
-	analysis: AnalysisSnapshot
-): Promise<SlackNotificationResult> {
-	const slack = analysis.requestPayload.notificationContext.slack;
-	const shouldNotify = analysis.status === 'failed' ? slack.notifyOnFailure : slack.notifyOnSuccess;
-	const skippedBase = {
-		attempted: false,
-		status: 'skipped' as const,
-		channelId: slack.channelId,
-		channelName: slack.channelName
-	};
-
-	if (slack.reason) {
-		return {
-			...skippedBase,
-			reason: slack.reason
-		};
-	}
-
-	if (!slack.workspaceInstalled) {
-		return {
-			...skippedBase,
-			reason: 'slack_not_installed'
-		};
-	}
-
-	if (!slack.channelId) {
-		return {
-			...skippedBase,
-			reason: 'missing_channel'
-		};
-	}
-
-	if (!shouldNotify) {
-		return {
-			...skippedBase,
-			reason:
-				analysis.status === 'failed'
-					? 'failure_notifications_disabled'
-					: 'success_notifications_disabled'
-		};
-	}
-
-	const [workspace, workspaceSecret] = await Promise.all([
-		getActiveSlackWorkspace(slack.requestedByUserId),
-		getActiveSlackWorkspaceSecret(slack.requestedByUserId)
-	]);
-
-	if (!workspace || !workspaceSecret) {
-		return {
-			...skippedBase,
-			reason: 'slack_not_installed'
-		};
-	}
-
-	if (
-		(slack.workspaceId && workspace.id !== slack.workspaceId) ||
-		(slack.workspaceTeamId && workspace.teamId !== slack.workspaceTeamId)
-	) {
-		return {
-			...skippedBase,
-			reason: 'workspace_changed'
-		};
-	}
-
-	try {
-		await postSlackMessage({
-			accessToken: decryptSlackToken(workspaceSecret.encryptedAccessToken),
-			channelId: slack.channelId,
-			text: buildSlackNotificationMessage(analysis)
-		});
-
-		return {
-			attempted: true,
-			status: 'sent',
-			channelId: slack.channelId,
-			channelName: slack.channelName,
-			notifiedAt: new Date().toISOString()
-		};
-	} catch (error) {
-		return {
-			attempted: true,
-			status: 'failed',
-			channelId: slack.channelId,
-			channelName: slack.channelName,
-			reason:
-				error instanceof Error
-					? error.message
-					: 'No se pudo enviar la notificación de Slack desde el servidor.'
-		};
-	}
-}
-
 async function getSlackChannelsForWorkspace(userId: string): Promise<SlackChannelOption[]> {
 	const workspaceSecret = await getActiveSlackWorkspaceSecret(userId);
 
@@ -469,34 +383,4 @@ function validateChannelSelection(
 
 function isSlackNotificationPaused(settings: SlackPreferenceSettings) {
 	return !settings.notifyOnSuccess && !settings.notifyOnFailure;
-}
-
-function buildSlackNotificationMessage(analysis: AnalysisSnapshot) {
-	const digest = analysis.callbackPayload?.slackDigestMd?.trim();
-	const summary = analysis.callbackPayload?.executiveSummaryMd?.trim();
-	const fallbackDigest =
-		digest ||
-		getFirstNonEmptyLine(summary) ||
-		(analysis.status === 'failed'
-			? 'El workflow terminó con error. Revisa el análisis completo.'
-			: 'El brief del análisis ya está listo para revisión.');
-
-	return [
-		`*${analysis.requestPayload.projectName}*`,
-		`Estado: ${analysis.status}`,
-		`Outdated: ${analysis.requestPayload.dependencyStats.outdated} · Major: ${analysis.requestPayload.dependencyStats.majors} · Deprecated: ${analysis.requestPayload.dependencyStats.deprecated}`,
-		fallbackDigest,
-		analysis.requestPayload.analysisUrl
-			? `Analisis completo: ${analysis.requestPayload.analysisUrl}`
-			: undefined
-	]
-		.filter((line): line is string => Boolean(line))
-		.join('\n');
-}
-
-function getFirstNonEmptyLine(value?: string) {
-	return value
-		?.split('\n')
-		.map((line) => line.trim())
-		.find(Boolean);
 }

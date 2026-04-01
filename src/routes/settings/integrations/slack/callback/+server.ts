@@ -35,7 +35,7 @@ export const GET: RequestHandler = async ({ url, locals, cookies }) => {
 		throw redirect(303, '/settings/integrations/slack?slack=invalid-state');
 	}
 
-	let workspace;
+	let workspace: Awaited<ReturnType<typeof completeSlackInstallation>>;
 
 	try {
 		workspace = await completeSlackInstallation({
