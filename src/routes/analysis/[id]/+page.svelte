@@ -120,26 +120,6 @@
 		</section>
 
 		<div class="space-y-6">
-			<DependencySection
-				terminalTitle="deps --actionable"
-				eyebrow="Requieren acción"
-				title="Dependencias que conviene mover"
-				description="Requieren cambio en el package.json o revisión manual antes de avanzar."
-				items={criticalDependencies}
-				emptyMessage="Ninguna dependencia requiere cambio inmediato en el package.json."
-			/>
-
-			{#if coveredBySpecDependencies.length}
-				<DependencySection
-					terminalTitle="deps --resolved"
-					eyebrow="Cubiertas por el rango"
-					title="Ya resueltas por el package.json"
-					description="El rango declarado ya cubre la latest o están alineadas. No requieren cambios."
-					items={coveredBySpecDependencies}
-					emptyMessage=""
-				/>
-			{/if}
-
 			{#if activeAnalysis.callbackPayload?.packageBriefs.length}
 				<section class="terminal-window">
 					<div class="terminal-bar">
@@ -161,6 +141,26 @@
 						</div>
 					</div>
 				</section>
+			{/if}
+
+			<DependencySection
+				terminalTitle="deps --actionable"
+				eyebrow="Requieren acción"
+				title="Dependencias que conviene mover"
+				description="Requieren cambio en el package.json o revisión manual antes de avanzar."
+				items={criticalDependencies}
+				emptyMessage="Ninguna dependencia requiere cambio inmediato en el package.json."
+			/>
+
+			{#if coveredBySpecDependencies.length}
+				<DependencySection
+					terminalTitle="deps --resolved"
+					eyebrow="Cubiertas por el rango"
+					title="Ya resueltas por el package.json"
+					description="El rango declarado ya cubre la latest o están alineadas. No requieren cambios."
+					items={coveredBySpecDependencies}
+					emptyMessage=""
+				/>
 			{/if}
 
 			{#if activeAnalysis.callbackPayload?.sources.length}
