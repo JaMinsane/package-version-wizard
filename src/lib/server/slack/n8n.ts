@@ -1,35 +1,11 @@
 import { env } from '$env/dynamic/private';
 
-export const MANAGED_N8N_SLACK_CREDENTIAL_NAME = 'Package Version Wizard Slack Bot';
+const MANAGED_N8N_SLACK_CREDENTIAL_NAME_PREFIX = 'Package Version Wizard Slack Bot';
 
 interface N8nCredentialRecord {
 	id: string;
 	name: string;
 	type: string;
-}
-
-export async function syncManagedSlackCredential(accessToken: string) {
-	const credentials = await listN8nCredentials();
-	const existing = credentials.find(
-		(credential) =>
-			credential.name === MANAGED_N8N_SLACK_CREDENTIAL_NAME && credential.type === 'slackApi'
-	);
-
-	if (existing) {
-		await saveN8nCredential(existing.id, accessToken, 'PUT');
-
-		return {
-			credentialId: existing.id,
-			credentialName: MANAGED_N8N_SLACK_CREDENTIAL_NAME
-		};
-	}
-
-	const created = await createN8nCredential(accessToken);
-
-	return {
-		credentialId: created.id,
-		credentialName: created.name
-	};
 }
 
 async function listN8nCredentials() {
@@ -50,11 +26,53 @@ async function listN8nCredentials() {
 	throw new Error('n8n devolvió una lista de credenciales con formato inesperado.');
 }
 
-async function createN8nCredential(accessToken: string) {
+export async function syncManagedSlackCredentialForWorkspace(input: {
+	accessToken: string;
+	userId: string;
+	teamId: string;
+	existingCredentialId?: string;
+	existingCredentialName?: string;
+}) {
+	const credentialName =
+		input.existingCredentialName ||
+		buildManagedSlackCredentialName({
+			userId: input.userId,
+			teamId: input.teamId
+		});
+	const credentials = await listN8nCredentials();
+	const existing =
+		(input.existingCredentialId
+			? credentials.find(
+					(credential) =>
+						credential.id === input.existingCredentialId && credential.type === 'slackApi'
+				)
+			: undefined) ??
+		credentials.find(
+			(credential) => credential.name === credentialName && credential.type === 'slackApi'
+		);
+
+	if (existing) {
+		await saveN8nCredential(existing.id, input.accessToken, 'PUT', credentialName);
+
+		return {
+			credentialId: existing.id,
+			credentialName
+		};
+	}
+
+	const created = await createN8nCredential(input.accessToken, credentialName);
+
+	return {
+		credentialId: created.id,
+		credentialName: created.name
+	};
+}
+
+async function createN8nCredential(accessToken: string, credentialName: string) {
 	const payload = await n8nRequest('/api/v1/credentials', {
 		method: 'POST',
 		body: JSON.stringify({
-			name: MANAGED_N8N_SLACK_CREDENTIAL_NAME,
+			name: credentialName,
 			type: 'slackApi',
 			data: buildSlackCredentialData(accessToken)
 		})
@@ -66,20 +84,21 @@ async function createN8nCredential(accessToken: string) {
 async function saveN8nCredential(
 	credentialId: string,
 	accessToken: string,
-	method: 'PUT' | 'PATCH'
+	method: 'PUT' | 'PATCH',
+	credentialName: string
 ) {
 	try {
 		await n8nRequest(`/api/v1/credentials/${credentialId}`, {
 			method,
 			body: JSON.stringify({
-				name: MANAGED_N8N_SLACK_CREDENTIAL_NAME,
+				name: credentialName,
 				type: 'slackApi',
 				data: buildSlackCredentialData(accessToken)
 			})
 		});
 	} catch (error) {
 		if (method === 'PUT') {
-			await saveN8nCredential(credentialId, accessToken, 'PATCH');
+			await saveN8nCredential(credentialId, accessToken, 'PATCH', credentialName);
 			return;
 		}
 
@@ -152,4 +171,8 @@ function asCredentialRecord(value: unknown): N8nCredentialRecord {
 	}
 
 	return record as N8nCredentialRecord;
+}
+
+function buildManagedSlackCredentialName(input: { userId: string; teamId: string }) {
+	return `${MANAGED_N8N_SLACK_CREDENTIAL_NAME_PREFIX} [${input.teamId}:${input.userId}]`;
 }

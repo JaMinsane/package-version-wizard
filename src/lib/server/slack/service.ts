@@ -8,7 +8,7 @@ import {
 	listSlackChannels
 } from '$lib/server/slack/client';
 import { decryptSlackToken, encryptSlackToken } from '$lib/server/slack/crypto';
-import { syncManagedSlackCredential } from '$lib/server/slack/n8n';
+import { syncManagedSlackCredentialForWorkspace } from '$lib/server/slack/n8n';
 import {
 	clearSlackPreferenceData,
 	clearSlackWorkspaceInstallation,
@@ -122,7 +122,13 @@ export async function completeSlackInstallation(input: { code: string; userId: s
 	}
 
 	try {
-		const synced = await syncManagedSlackCredential(installation.accessToken);
+		const synced = await syncManagedSlackCredentialForWorkspace({
+			accessToken: installation.accessToken,
+			userId: input.userId,
+			teamId: installation.teamId,
+			existingCredentialId: workspace.n8nCredentialId,
+			existingCredentialName: workspace.n8nCredentialName
+		});
 
 		await updateSlackWorkspaceSyncStatus({
 			workspaceId: workspace.id,
@@ -283,6 +289,16 @@ export async function resolveSlackNotificationContext(input: {
 		};
 	}
 
+	if (!workspace.n8nCredentialId || !workspace.n8nCredentialName) {
+		return {
+			workspaceInstalled: true,
+			requestedByUserId: input.requestedByUserId,
+			requestedByUserName: input.requestedByUserName,
+			reason: 'slack_workspace_not_synced',
+			...DEFAULT_SLACK_PREFERENCES
+		};
+	}
+
 	const [userDefaults, projectSettings] = await Promise.all([
 		getUserSlackPreferences(input.requestedByUserId),
 		getProjectSlackSettings(input.projectId)
@@ -294,6 +310,8 @@ export async function resolveSlackNotificationContext(input: {
 			workspaceInstalled: true,
 			workspaceId: workspace.id,
 			workspaceTeamId: workspace.teamId,
+			n8nCredentialId: workspace.n8nCredentialId,
+			n8nCredentialName: workspace.n8nCredentialName,
 			requestedByUserId: input.requestedByUserId,
 			requestedByUserName: input.requestedByUserName,
 			reason: 'notifications_paused',
@@ -306,6 +324,8 @@ export async function resolveSlackNotificationContext(input: {
 			workspaceInstalled: true,
 			workspaceId: workspace.id,
 			workspaceTeamId: workspace.teamId,
+			n8nCredentialId: workspace.n8nCredentialId,
+			n8nCredentialName: workspace.n8nCredentialName,
 			requestedByUserId: input.requestedByUserId,
 			requestedByUserName: input.requestedByUserName,
 			reason: 'missing_channel',
@@ -317,6 +337,8 @@ export async function resolveSlackNotificationContext(input: {
 		workspaceInstalled: true,
 		workspaceId: workspace.id,
 		workspaceTeamId: workspace.teamId,
+		n8nCredentialId: workspace.n8nCredentialId,
+		n8nCredentialName: workspace.n8nCredentialName,
 		requestedByUserId: input.requestedByUserId,
 		requestedByUserName: input.requestedByUserName,
 		...effective

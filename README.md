@@ -86,7 +86,7 @@ El runtime productivo de este repo se ejecuta con Bun. `node build/index.js` no 
 - `N8N_API_BASE_URL`
 - `N8N_API_KEY`
 
-La configuración editable de Slack quedó reducida a lo mínimo: canal, `Al completar` y `Al fallar`. El mensaje final no se arma en la UI; lo compone `n8n` con proyecto, estado, métricas, `slackDigestMd` y link al análisis.
+La configuración editable de Slack quedó reducida a lo mínimo: canal, `Al completar` y `Al fallar`. El mensaje final no se arma en la UI; lo compone `n8n` con proyecto, estado, métricas, `slackDigestMd` y link al análisis. La credencial de Slack se sincroniza por workspace activo del usuario, no como credencial global compartida.
 
 Consulta [`.env.example`](./.env.example) para el formato base.
 

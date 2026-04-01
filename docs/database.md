@@ -175,7 +175,7 @@ Workspace activo de Slack por usuario.
 - `slack_workspaces_user_active_idx`
 - `slack_workspaces_installed_by_idx`
 
-El token del bot se guarda cifrado y la app intenta sincronizarlo como credencial administrada dentro de `n8n`.
+El token del bot se guarda cifrado y la app sincroniza una credencial administrada en `n8n` por workspace activo del usuario.
 
 ### `user_slack_preferences`
 

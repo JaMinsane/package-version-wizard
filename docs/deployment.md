@@ -53,6 +53,8 @@ Opcionales para Slack:
 - `N8N_API_BASE_URL`
 - `N8N_API_KEY`
 
+Después de aplicar la migración que invalida la credencial global legacy de Slack, cada usuario debe reconectar su workspace para resincronizar la credencial por workspace en `n8n`.
+
 Variables operativas del contenedor:
 
 - `HOST`

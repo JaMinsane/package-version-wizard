@@ -171,7 +171,7 @@ La implementación vive en [`src/lib/server/markdown.ts`](../src/lib/server/mark
 - Un workspace activo por usuario.
 - Instalación vía OAuth desde la app.
 - Token bot cifrado en Postgres.
-- Sincronización de una credencial administrada en `n8n`.
+- Sincronización de una credencial administrada en `n8n` por workspace activo del usuario.
 - Envío final desde el nodo oficial de Slack dentro del workflow principal.
 
 ### Resolución de configuración

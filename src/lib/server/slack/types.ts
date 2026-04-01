@@ -40,6 +40,8 @@ export interface SlackNotificationContext extends SlackPreferenceSettings {
 	workspaceInstalled: boolean;
 	workspaceId?: string;
 	workspaceTeamId?: string;
+	n8nCredentialId?: string;
+	n8nCredentialName?: string;
 	requestedByUserId: string;
 	requestedByUserName: string;
 	reason?: string;
